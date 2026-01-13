@@ -1,0 +1,30 @@
+# FMCG MASTERING PLATFORM - DOMAIN KNOWLEDGE BASE
+
+### 🏷️ BRAND RULES:
+- Standardized Brands: OREO, GLICO, POCKY, RITZ, DUTCH LADY, NESCAFE, MAGGI.
+- If a brand is slightly misspelled (e.g., 'GLICCO'), map it to the standardized version.
+
+### 🧪 FLAVOR & VARIANT MAPPING:
+- COKLIT, COKLAT, CHOC -> CHOCOLATE
+- SSU, SUSU, MLK -> MILK
+- AYM, AYAM, CKN -> CHICKEN
+- PDS, HOT, PEDAS -> SPICY
+- VNL -> VANILLA
+
+### 🔍 STRICT SCHEMA RULES:
+- **Field Names are Case-Sensitive**:
+  - Use `BRAND` (All caps) for brand searches.
+  - Use `Markets` (Starts with M) for region searches.
+  - Use `Facts` (Starts with F) for metric searches.
+- **Market Names**: Must match exactly: 'Pen Malaysia', 'EM', 'Total 7-Eleven'.
+- **Metrics**: Must match exactly: 'Sales Value', 'Sales Units', etc.
+
+### 🤝 MERGING LOGIC:
+- We merge products across UPCs if Brand + Flavor + Size match.
+- 'merge_items' array stores raw names from Excel.
+- 'merged_upcs' array stores all related barcode IDs.
+
+### 🚫 ZERO ERROR POLICY:
+- Never say "I don't know" or "No results found" without attempting a regex search on the 'ITEM' field.
+- If a specific brand query fails, try a keyword search for that brand name inside the ITEM field.
+- If no data exists, suggest the closest matching Brand or Flavor.

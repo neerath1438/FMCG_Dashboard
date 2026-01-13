@@ -1,0 +1,31 @@
+Total Documents: 12270
+
+--- Distinct Markets Found ---
+'EM MT Convenience Store'
+'EM MT Drugstore'
+'EM MT Hmkt/Smkt/Mini'
+'EM Total 7-Eleven'
+'East Malaysia (EM 32 Towns)'
+'PM MT Convenience Store'
+'PM MT Drugstore/Pharmacy'
+'PM MT Hmkt'
+'PM MT Mini'
+'PM MT Smkt'
+'PM Total 7-Eleven'
+'Pen Malaysia'
+
+--- Testing Query 'EM' ---
+Docs found matching 'EM': 5
+  - OREO CREAM CRACKER MATCHA 97G (EM MT Hmkt/Smkt/Mini)
+  - OREO CREAM CRACKER MATCHA 97G (EM MT Hmkt/Smkt/Mini)
+  - OREO CREAM CRACKER MATCHA 97G (EM MT Hmkt/Smkt/Mini)
+  - OREO CREAM CRACKER MATCHA 97G (EM MT Hmkt/Smkt/Mini)
+  - OREO CREAM CRACKER MATCHA 97G (EM MT Hmkt/Smkt/Mini)
+
+--- Testing Query 'East Malaysia' ---
+Docs found matching 'East Malaysia': 5
+  - OREO CREAM CRACKER MATCHA 97G (East Malaysia (EM 32 Towns))
+  - OREO CREAM CRACKER MATCHA 97G (East Malaysia (EM 32 Towns))
+  - OREO CREAM CRACKER MATCHA 97G (East Malaysia (EM 32 Towns))
+  - OREO CREAM CRACKER MATCHA 97G (East Malaysia (EM 32 Towns))
+  - OREO CREAM CRACKER MATCHA 97G (East Malaysia (EM 32 Towns))

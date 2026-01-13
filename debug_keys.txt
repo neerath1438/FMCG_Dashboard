@@ -1,0 +1,32 @@
+Apr 24 - w/e 30/04/24
+Aug 24 - w/e 31/08/24
+BRAND
+Dec 23 - w/e 31/12/23
+Facts
+Feb 24 - w/e 29/02/24
+ITEM
+Jan 24 - w/e 31/01/24
+Jul 24 - w/e 31/07/24
+Jun 24 - w/e 30/06/24
+MANUFACTURER
+MAT Nov'24
+MPACK
+Mar 24 - w/e 31/03/24
+Markets
+May 24 - w/e 31/05/24
+NRMSIZE
+Nov 24 - w/e 30/11/24
+Oct 24 - w/e 31/10/24
+Product Segment
+Sep 24 - w/e 30/09/24
+UPC
+VARIANT
+_id
+llm_confidence_min
+merge_id
+merge_items
+merge_level
+merge_rule
+merged_from_docs
+merged_upcs
+normalized_item
