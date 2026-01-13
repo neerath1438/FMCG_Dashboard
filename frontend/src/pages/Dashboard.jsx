@@ -249,7 +249,7 @@ const Dashboard = () => {
                 {/* Input Rows (SINGLE_STOCK) */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-4">
-                        <CircularProgress percentage={100} />
+                        <CircularProgress percentage={singleStockRows > 0 ? 100 : 0} />
                         <div>
                             <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Input Rows</p>
                             <p className="text-2xl font-bold text-gray-900">{singleStockRows.toLocaleString()}</p>

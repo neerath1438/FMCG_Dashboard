@@ -61,7 +61,7 @@ export const uploadAPI = {
     uploadExcel: (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        return axios.post('/api/upload/excel', formData, {
+        return api.post('/upload/excel', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
     },
