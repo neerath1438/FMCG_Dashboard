@@ -206,21 +206,52 @@ async def chatbot_query(request: dict):
 
 @app.get("/export/master-stock")
 async def export_master_stock():
-    """Export MASTER_STOCK collection to Excel"""
+    """Export MASTER_STOCK collection to Excel with clean columns"""
     coll = get_collection("MASTER_STOCK")
     docs = list(coll.find({}, {"_id": 0}))
     
     if not docs:
         return {"error": "No data to export"}
     
-    # Flatten the data if needed (pandas handles dicts well)
+    # Flatten the data
     df = pd.DataFrame(docs)
     
-    # Ensure merged_upcs and merge_items are strings for Excel
-    if "merged_upcs" in df.columns:
-        df["merged_upcs"] = df["merged_upcs"].apply(lambda x: ", ".join(map(str, x)) if isinstance(x, list) else x)
+    # Define essential columns to export (remove duplicates and internal fields)
+    essential_columns = [
+        # Identifiers
+        "UPC", "merge_id", "sheet_name",
+        
+        # LLM Extracted (Clean versions)
+        "brand", "flavour", "size", "normalized_item",
+        
+        # Original Product Info (only if LLM fields don't exist)
+        "ITEM", "MANUFACTURER", "Product Segment",
+        
+        # Attributes
+        "Markets", "MPACK", "Facts", 
+        
+        # Monthly Data (all w/e columns)
+        "Dec 23 - w/e 31/12/23",
+        "Jan 24 - w/e 31/01/24", "Feb 24 - w/e 29/02/24", "Mar 24 - w/e 31/03/24",
+        "Apr 24 - w/e 30/04/24", "May 24 - w/e 31/05/24", "Jun 24 - w/e 30/06/24",
+        "Jul 24 - w/e 31/07/24", "Aug 24 - w/e 31/08/24", "Sep 24 - w/e 30/09/24",
+        "Oct 24 - w/e 31/10/24", "Nov 24 - w/e 30/11/24",
+        "MAT Nov'24",
+        
+        # Merge Metadata
+        "merge_items", "merged_from_docs", "merge_level", "merge_rule",
+        "llm_confidence_min"
+    ]
+    
+    # Select only columns that exist in the dataframe
+    export_columns = [col for col in essential_columns if col in df.columns]
+    df = df[export_columns]
+    
+    # Format list columns for Excel
     if "merge_items" in df.columns:
         df["merge_items"] = df["merge_items"].apply(lambda x: " | ".join(map(str, x)) if isinstance(x, list) else x)
+    if "merged_upcs" in df.columns:
+        df["merged_upcs"] = df["merged_upcs"].apply(lambda x: ", ".join(map(str, x)) if isinstance(x, list) else x)
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
