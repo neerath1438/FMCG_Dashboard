@@ -13,6 +13,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Fix permissions for node_modules binaries (fixes exit code 126)
+RUN chmod -R +x node_modules/.bin 2>/dev/null || true
+
 # Build the application
 RUN npm run build
 
