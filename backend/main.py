@@ -21,15 +21,19 @@ from typing import Optional
 
 app = FastAPI(title="FMCG Product Mastering Platform")
 
-# CORS Configuration - Support HTTP and HTTPS
+# CORS Configuration - Support direct port access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # Production - Direct Docker ports
+        "http://40.81.140.169:3000",
+        "http://40.81.140.169:8000",
+        
         # Production - HTTPS (future)
         "https://retail-5465",
         "https://retail-5465-api",
         
-        # Production - HTTP (current)
+        # Production - HTTP with custom ports
         "http://retail-5465:8080",
         "http://retail-5465-api:8081",
         "http://40.81.140.169:8080",
@@ -38,8 +42,10 @@ app.add_middleware(
         # Development
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://localhost:8000",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
