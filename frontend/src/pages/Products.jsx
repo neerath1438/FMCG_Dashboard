@@ -9,28 +9,55 @@ const Products = () => {
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterBrand, setFilterBrand] = useState('all');
+    const [hasMore, setHasMore] = useState(true);
+    const [skip, setSkip] = useState(0);
+    const limit = 100;
 
     useEffect(() => {
-        fetchProducts();
+        fetchProducts(true);
     }, []);
 
     useEffect(() => {
         filterProducts();
     }, [searchTerm, filterBrand, products]);
 
-    const fetchProducts = async () => {
+    const fetchProducts = async (reset = false) => {
         try {
-            setLoading(true);
+            if (reset) {
+                setLoading(true);
+                setSkip(0);
+            } else {
+                setLoadingMore(true);
+            }
+
+            const currentSkip = reset ? 0 : skip;
             const data = await dashboardAPI.getProducts();
-            const products = data?.data || data;
-            setProducts(Array.isArray(products) ? products : []);
-            setFilteredProducts(Array.isArray(products) ? products : []);
+
+            // Handle new paginated response format
+            const response = data?.data || data;
+            const newProducts = response?.products || response;
+            const total = response?.total || newProducts.length;
+
+            if (Array.isArray(newProducts)) {
+                if (reset) {
+                    setProducts(newProducts);
+                    setFilteredProducts(newProducts);
+                } else {
+                    setProducts(prev => [...prev, ...newProducts]);
+                    setFilteredProducts(prev => [...prev, ...newProducts]);
+                }
+
+                setHasMore((currentSkip + limit) < total);
+                setSkip(currentSkip + limit);
+            }
         } catch (error) {
             console.error('Error fetching products:', error);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     };
 
@@ -124,11 +151,27 @@ const Products = () => {
                     <p className="text-gray-500">No products found</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredProducts.map((product, index) => (
-                        <ProductCard key={product.merge_id || index} product={product} />
-                    ))}
-                </div>
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredProducts.map((product, index) => (
+                            <ProductCard key={product.merge_id || index} product={product} />
+                        ))}
+                    </div>
+
+                    {/* Load More Button */}
+                    {hasMore && !searchTerm && filterBrand === 'all' && (
+                        <div className="flex justify-center mt-8">
+                            <Button
+                                variant="outline"
+                                onClick={() => fetchProducts(false)}
+                                loading={loadingMore}
+                                disabled={loadingMore}
+                            >
+                                {loadingMore ? 'Loading...' : 'Load More Products'}
+                            </Button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

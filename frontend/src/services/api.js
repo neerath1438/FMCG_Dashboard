@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// API base URL - Direct backend access
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://40.81.140.169:8000';
+// API base URL - Local development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -50,7 +50,7 @@ export const verifyAuthAPI = (token) => api.get('/auth/verify', {
 // API methods
 export const dashboardAPI = {
     getSummary: () => api.get('/dashboard/summary'),
-    getProducts: () => api.get('/dashboard/products'),
+    getProducts: (limit = 100, skip = 0) => api.get(`/dashboard/products?limit=${limit}&skip=${skip}`),
     getProduct: (mergeId) => api.get(`/dashboard/product/${mergeId}`),
     getLowConfidence: () => api.get('/dashboard/low-confidence'),
     exportMasterStock: () => api.get('/export/master-stock', { responseType: 'blob' }),

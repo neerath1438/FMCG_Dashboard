@@ -10,16 +10,27 @@ const Analytics = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchProducts();
+        fetchData();
     }, []);
 
-    const fetchProducts = async () => {
+    const fetchData = async () => {
         try {
             setLoading(true);
-            const data = await dashboardAPI.getProducts();
-            setProducts(data);
+            // Fetch all products for analytics (use large limit)
+            const data = await dashboardAPI.getProducts(50000, 0);
+
+            // Handle new paginated response format
+            const response = data?.data || data;
+            const productsArray = response?.products || response;
+
+            if (Array.isArray(productsArray)) {
+                setProducts(productsArray);
+            } else {
+                console.error('Products is not an array:', productsArray);
+                setProducts([]);
+            }
         } catch (error) {
-            console.error('Error fetching products:', error);
+            console.error('Error fetching analytics data:', error);
         } finally {
             setLoading(false);
         }
@@ -45,16 +56,12 @@ const Analytics = () => {
             'Merged (2-5)': 0,
             'Merged (6-10)': 0,
             'Merged (10+)': 0,
-            'Low Confidence': 0,
         };
 
         products.forEach(p => {
-            const level = p.merge_level || '';
             const mergedDocs = p.merged_from_docs || 1;
 
-            if (level.includes('LOW_CONFIDENCE')) {
-                levels['Low Confidence']++;
-            } else if (level.includes('NO_MERGE')) {
+            if (mergedDocs === 1) {
                 levels['Single Item']++;
             } else if (mergedDocs >= 10) {
                 levels['Merged (10+)']++;

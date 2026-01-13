@@ -204,10 +204,34 @@ async def get_summary():
     }
 
 @app.get("/dashboard/products")
-async def get_products():
+async def get_products(limit: int = 100, skip: int = 0):
+    """Get products with pagination and optimized fields"""
     coll = get_collection("MASTER_STOCK")
-    products = list(coll.find({}, {"_id": 0}))
-    return products
+    
+    # Only return essential fields for list view
+    projection = {
+        "_id": 0,
+        "merge_id": 1,
+        "BRAND": 1,
+        "ITEM": 1,
+        "UPC": 1,
+        "merged_from_docs": 1,
+        "merge_level": 1,
+        "brand": 1,
+        "flavour": 1,
+        "size": 1
+    }
+    
+    # Use limit and skip for pagination
+    products = list(coll.find({}, projection).limit(limit).skip(skip))
+    total_count = coll.count_documents({})
+    
+    return {
+        "products": products,
+        "total": total_count,
+        "limit": limit,
+        "skip": skip
+    }
 
 @app.get("/dashboard/product/{merge_id}")
 async def get_product_detail(merge_id: str):
@@ -216,9 +240,27 @@ async def get_product_detail(merge_id: str):
     return product
 
 @app.get("/dashboard/low-confidence")
-async def get_low_confidence():
+async def get_low_confidence(limit: int = 100):
+    """Get low confidence products with limit"""
     coll = get_collection("MASTER_STOCK")
-    products = list(coll.find({"is_low_confidence": True}, {"_id": 0}))
+    
+    # Only return essential fields
+    projection = {
+        "_id": 0,
+        "merge_id": 1,
+        "BRAND": 1,
+        "ITEM": 1,
+        "UPC": 1,
+        "llm_confidence_min": 1,
+        "brand": 1,
+        "flavour": 1
+    }
+    
+    products = list(coll.find(
+        {"llm_confidence_min": {"$lt": 0.8}}, 
+        projection
+    ).limit(limit))
+    
     return products
 
 @app.post("/chatbot/query")

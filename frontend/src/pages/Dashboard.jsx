@@ -64,7 +64,10 @@ const Dashboard = () => {
             ]);
 
             setSummary(summaryData?.data || summaryData);
-            const products = productsData?.data || productsData;
+
+            // Handle new paginated response format
+            const productsResponse = productsData?.data || productsData;
+            const products = productsResponse?.products || productsResponse;
             setRecentProducts(Array.isArray(products) ? products.slice(0, 10) : []);
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
