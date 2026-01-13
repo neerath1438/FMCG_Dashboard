@@ -5,6 +5,7 @@ import json
 import os
 import math
 import copy
+import time
 from openai import OpenAI
 import httpx
 from backend.database import get_collection
@@ -357,6 +358,11 @@ Return JSON only:
         
         raw_content = raw_content.strip()
         
+        # Handle empty response
+        if not raw_content or raw_content == '{}':
+            print(f"Empty LLM response for '{item}' - using fallback")
+            raise ValueError("Empty response from LLM")
+        
         # Clean markdown code blocks if present
         if raw_content.startswith("```"):
             # Find first opening brace
@@ -366,13 +372,27 @@ Return JSON only:
                 raw_content = raw_content[start_idx:end_idx+1]
         
         data = json.loads(raw_content)
+        
+        # Validate required fields
+        if not data.get("brand") and not data.get("flavour"):
+            print(f"Invalid LLM data for '{item}' - missing brand/flavour")
+            raise ValueError("Missing required fields")
+            
+    except json.JSONDecodeError as e:
+        print(f"JSON Parse Error for '{item}': {e}")
+        print(f"RAW RESPONSE: {raw_content[:200] if raw_content else 'EMPTY'}")
+        # Fallback to default
+        data = {
+            "brand": "",
+            "flavour": "",
+            "size": "",
+            "base_item": item,
+            "removed_marketing_terms": [],
+            "confidence": 0.0
+        }
     except Exception as e:
         print(f"LLM Error for '{item}': {e}")
-        # Log the raw content for debugging
-        try:
-            print(f"RAW RESPONSE: {resp.choices[0].message.content}") 
-        except:
-            pass
+        # Fallback to default
         data = {
             "brand": "",
             "flavour": "",
@@ -459,10 +479,29 @@ def process_llm_mastering_flow_2(sheet_name):
     unique_items = list(set([d.get("ITEM") for d in docs if d.get("ITEM")]))
     
     norm_map = {}
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        results = list(executor.map(normalize_item_llm, unique_items))
-        for item, res in zip(unique_items, results):
-            norm_map[item] = res
+    
+    # Process in batches to avoid rate limits
+    batch_size = 50
+    total_batches = (len(unique_items) + batch_size - 1) // batch_size
+    
+    print(f"Processing {len(unique_items)} unique items in {total_batches} batches...")
+    
+    for batch_num in range(total_batches):
+        start_idx = batch_num * batch_size
+        end_idx = min((batch_num + 1) * batch_size, len(unique_items))
+        batch_items = unique_items[start_idx:end_idx]
+        
+        print(f"Batch {batch_num + 1}/{total_batches}: Processing {len(batch_items)} items...")
+        
+        with ThreadPoolExecutor(max_workers=5) as executor:  # Reduced from 10 to 5
+            results = list(executor.map(normalize_item_llm, batch_items))
+            for item, res in zip(batch_items, results):
+                norm_map[item] = res
+        
+        # Wait between batches to avoid rate limits
+        if batch_num < total_batches - 1:
+            print(f"Waiting 10 seconds before next batch...")
+            time.sleep(10)
 
             
     # 2. Grouping Phase: Consistently group docs based on extracted attributes + Strict Keys
