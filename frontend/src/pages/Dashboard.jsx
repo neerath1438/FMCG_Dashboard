@@ -161,11 +161,13 @@ const Dashboard = () => {
     }
 
     // Calculate percentages for circular progress
-    const totalProducts = summary?.master_products || 0;
-    const mergedProducts = summary?.raw_rows || 0;
+    const singleStockRows = summary?.single_stock_rows || 0;
+    const masterStockRows = summary?.master_stock_rows || 0;
+    const itemsMerged = summary?.items_merged || 0;
     const lowConfidence = summary?.low_confidence || 0;
-    const healthPercent = totalProducts > 0 ? Math.round(((totalProducts - lowConfidence) / totalProducts) * 100) : 0;
-    const mergePercent = mergedProducts > 0 && totalProducts > 0 ? Math.min(Math.round((mergedProducts / (mergedProducts + totalProducts)) * 100), 100) : 0;
+
+    const healthPercent = masterStockRows > 0 ? Math.round(((masterStockRows - lowConfidence) / masterStockRows) * 100) : 0;
+    const mergePercent = singleStockRows > 0 ? Math.round((itemsMerged / singleStockRows) * 100) : 0;
 
     return (
         <div className="space-y-6">
@@ -228,57 +230,58 @@ const Dashboard = () => {
                         </button>
                     </div>
 
-                    {/* Decorative Image Placeholder */}
-                    <div className="hidden xl:block w-32 h-full rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-400 to-purple-500 relative">
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                        <div className="absolute bottom-3 left-3 right-3">
-                            <div className="h-1 bg-white/30 rounded mb-1" />
-                            <div className="h-1 bg-white/20 rounded w-2/3" />
-                        </div>
+                    {/* Decorative Image */}
+                    <div className="hidden xl:block w-32 h-full rounded-2xl overflow-hidden relative shadow-lg">
+                        <img
+                            src="/dashboard-visual.png"
+                            alt="Product Intelligence"
+                            className="w-full h-full object-cover"
+                        />
                     </div>
                 </div>
             </div>
 
             {/* Stats Row - 3 Cards with Circular Progress */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Data Health */}
+                {/* Input Rows (SINGLE_STOCK) */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-4">
-                        <CircularProgress percentage={healthPercent} />
+                        <CircularProgress percentage={100} />
                         <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Data Health</p>
-                            <p className="text-2xl font-bold text-gray-900">{totalProducts}</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Input Rows</p>
+                            <p className="text-2xl font-bold text-gray-900">{singleStockRows.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400">SINGLE_STOCK</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Merge Status */}
+                {/* Items Merged */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-4">
                         <CircularProgress percentage={mergePercent} />
                         <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Merge Status</p>
-                            <p className="text-2xl font-bold text-gray-900">{mergedProducts}</p>
-                            <p className="text-xs text-gray-400">Total Rows</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Items Merged</p>
+                            <p className="text-2xl font-bold text-gray-900">{itemsMerged.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400">{mergePercent}% Reduction</p>
                         </div>
                     </div>
                 </div>
 
-                {/* UPC Coverage */}
+                {/* Output Rows (MASTER_STOCK) */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-4">
-                        <CircularProgress percentage={totalProducts > 0 ? Math.min(Math.round(((summary?.unique_upcs || 0) / totalProducts) * 100), 100) : 0} />
+                        <CircularProgress percentage={healthPercent} />
                         <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">UPC Coverage</p>
-                            <p className="text-2xl font-bold text-gray-900">{summary?.unique_upcs || 0}</p>
-                            <p className="text-xs text-gray-400">Unique UPCs</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Output Rows</p>
+                            <p className="text-2xl font-bold text-gray-900">{masterStockRows.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400">MASTER_STOCK</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Bottom Grid - 4 Info Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Bottom Grid - 3 Info Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Products Card */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
@@ -290,16 +293,16 @@ const Dashboard = () => {
                     </div>
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Total Products</span>
-                            <span className="text-sm font-semibold text-blue-600">{totalProducts}</span>
+                            <span className="text-sm text-gray-500">Input Rows</span>
+                            <span className="text-sm font-semibold text-blue-600">{singleStockRows.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Master Items</span>
-                            <span className="text-sm font-semibold text-blue-600">{summary?.master_products || 0}</span>
+                            <span className="text-sm text-gray-500">Output Rows</span>
+                            <span className="text-sm font-semibold text-blue-600">{masterStockRows.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Growth Rate</span>
-                            <span className="text-sm font-semibold text-emerald-600">+0%</span>
+                            <span className="text-sm text-gray-500">Unique UPCs</span>
+                            <span className="text-sm font-semibold text-emerald-600">{summary?.unique_upcs || 0}</span>
                         </div>
                     </div>
                 </div>
@@ -316,45 +319,17 @@ const Dashboard = () => {
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Merged</span>
-                            <span className="text-sm font-semibold text-blue-600">{recentProducts.filter(p => p.merged_from_docs > 1).length}</span>
+                            <span className="text-sm font-semibold text-blue-600">{summary?.merged_items || 0}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Single</span>
-                            <span className="text-sm font-semibold text-blue-600">{recentProducts.filter(p => !p.merged_from_docs || p.merged_from_docs === 1).length}</span>
+                            <span className="text-sm font-semibold text-blue-600">{summary?.single_items || 0}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Low Confidence</span>
-                            <span className="text-sm font-semibold text-amber-600">{lowConfidence}</span>
+                            <span className="text-sm text-gray-500">Unique Brands</span>
+                            <span className="text-sm font-semibold text-emerald-600">{summary?.unique_brands || 0}</span>
                         </div>
                     </div>
-                </div>
-
-                {/* Alerts Card */}
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <Bell size={18} className="text-amber-500" />
-                            <span className="font-semibold text-gray-900">Alerts</span>
-                        </div>
-                        <Badge variant="glass-warning" size="sm">Attention</Badge>
-                    </div>
-                    {lowConfidence > 0 ? (
-                        <div className="bg-red-50 rounded-xl p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <div className="w-2 h-2 bg-red-500 rounded-full" />
-                                <span className="text-sm font-medium text-red-700">Low Confidence</span>
-                            </div>
-                            <p className="text-xs text-red-600">{lowConfidence} items need review</p>
-                        </div>
-                    ) : (
-                        <div className="bg-emerald-50 rounded-xl p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                                <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-                                <span className="text-sm font-medium text-emerald-700">All Clear</span>
-                            </div>
-                            <p className="text-xs text-emerald-600">No issues detected</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Quick Actions Card */}

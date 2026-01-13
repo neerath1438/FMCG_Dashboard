@@ -134,33 +134,56 @@ async def trigger_llm_mastering(sheet_name: str):
 
 @app.get("/dashboard/summary")
 async def get_summary():
+    """Get dashboard summary with merge statistics"""
+    single_stock_coll = get_collection("SINGLE_STOCK")
     master_coll = get_collection("MASTER_STOCK")
     
+    # Count documents in each collection
+    single_stock_count = single_stock_coll.count_documents({})
+    master_stock_count = master_coll.count_documents({})
+    
+    # Calculate merge count
+    items_merged = single_stock_count - master_stock_count if single_stock_count > master_stock_count else 0
+    
+    # Get detailed statistics from MASTER_STOCK
     pipeline = [
         {
             "$group": {
                 "_id": None,
-                "total_master_products": {"$sum": 1},
-                "total_upcs": {"$sum": {"$size": "$merged_upcs"}},
-                "low_confidence_count": {"$sum": {"$cond": ["$is_low_confidence", 1, 0]}},
-                "total_docs_merged": {"$sum": "$merged_from_docs"}
+                "unique_upcs": {"$addToSet": "$UPC"},
+                "merged_items": {"$sum": {"$cond": [{"$gt": ["$merged_from_docs", 1]}, 1, 0]}},
+                "single_items": {"$sum": {"$cond": [{"$lte": ["$merged_from_docs", 1]}, 1, 0]}},
+                "low_confidence_count": {"$sum": {"$cond": [{"$lt": ["$llm_confidence_min", 0.8]}, 1, 0]}}
             }
         }
     ]
     
     result = list(master_coll.aggregate(pipeline))
-    summary = result[0] if result else {
-        "total_master_products": 0,
-        "total_upcs": 0,
-        "low_confidence_count": 0,
-        "total_docs_merged": 0
-    }
+    
+    if result:
+        unique_upcs_count = len(result[0].get("unique_upcs", []))
+        merged_items = result[0].get("merged_items", 0)
+        single_items = result[0].get("single_items", 0)
+        low_confidence = result[0].get("low_confidence_count", 0)
+    else:
+        unique_upcs_count = 0
+        merged_items = 0
+        single_items = 0
+        low_confidence = 0
+    
+    # Get unique brands count (using original BRAND column)
+    unique_brands = master_coll.distinct("BRAND")
+    unique_brands_count = len([b for b in unique_brands if b])  # Filter out empty/null brands
     
     return {
-        "raw_rows": summary["total_docs_merged"],
-        "unique_upcs": summary["total_upcs"],
-        "master_products": summary["total_master_products"],
-        "low_confidence": summary["low_confidence_count"]
+        "single_stock_rows": single_stock_count,
+        "master_stock_rows": master_stock_count,
+        "items_merged": items_merged,
+        "unique_upcs": unique_upcs_count,
+        "unique_brands": unique_brands_count,
+        "merged_items": merged_items,
+        "single_items": single_items,
+        "low_confidence": low_confidence
     }
 
 @app.get("/dashboard/products")
