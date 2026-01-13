@@ -227,13 +227,33 @@ def process_excel_flow_1(file_contents):
                 else:
                     merged_record["merge_level"] = f"MERGED_{merged_count}_VARIANTS"
                 
+                # Add sheet_name for upsert tracking
+                merged_record["sheet_name"] = "wersel_match"
+                
                 single_stock_records.append(merged_record)
         
-        # Store in SINGLE_STOCK
+        # Store in SINGLE_STOCK with upsert logic
         single_stock_coll = get_collection("SINGLE_STOCK")
-        single_stock_coll.delete_many({})
+        
+        # Delete only records from this sheet_name
+        single_stock_coll.delete_many({"sheet_name": "wersel_match"})
+        
         if single_stock_records:
-            single_stock_coll.insert_many(single_stock_records)
+            # Use bulk upsert to prevent duplicates
+            operations = []
+            for record in single_stock_records:
+                # Upsert based on merge_id + sheet_name
+                operations.append(UpdateOne(
+                    {
+                        "merge_id": record["merge_id"],
+                        "sheet_name": record["sheet_name"]
+                    },
+                    {"$set": record},
+                    upsert=True
+                ))
+            
+            if operations:
+                single_stock_coll.bulk_write(operations)
         
         sheets_info[sheet_name] = {
             "raw_count": len(df),
@@ -463,11 +483,12 @@ def process_llm_mastering_flow_2(sheet_name):
     src_col = get_collection("SINGLE_STOCK")
     tgt_col = get_collection("MASTER_STOCK")
     
-    # Clear previous master data
-    tgt_col.delete_many({})
+    # Clear previous master data for this sheet only
+    tgt_col.delete_many({"sheet_name": "wersel_match"})
     
-    docs = list(src_col.find())
-    print(f"Loaded {len(docs)} docs from SINGLE_STOCK")
+    # Only process records from this sheet_name
+    docs = list(src_col.find({"sheet_name": "wersel_match"}))
+    print(f"Loaded {len(docs)} docs from SINGLE_STOCK for sheet: wersel_match")
 
     
     groups = {}
@@ -613,6 +634,9 @@ def process_llm_mastering_flow_2(sheet_name):
             )
 
             doc["merge_id"] = doc.get("merge_id") or f"{doc['BRAND']}_{uuid.uuid4().hex}"
+            
+            # Add sheet_name for tracking
+            doc["sheet_name"] = "wersel_match"
 
             
             # Clean up internal fields
@@ -620,8 +644,13 @@ def process_llm_mastering_flow_2(sheet_name):
                 if k.startswith("_") or k.lower().startswith("unnamed"):
                     doc.pop(k)
             
-            tgt_col.insert_one(doc)
-            print(f"INSERT AS-IS | {doc['ITEM']}")
+            # Upsert instead of insert
+            tgt_col.update_one(
+                {"merge_id": doc["merge_id"], "sheet_name": doc["sheet_name"]},
+                {"$set": doc},
+                upsert=True
+            )
+            print(f"UPSERT AS-IS | {doc['ITEM']}")
             continue
 
         
@@ -668,13 +697,21 @@ def process_llm_mastering_flow_2(sheet_name):
         )
 
         
+        # Add sheet_name for tracking
+        base["sheet_name"] = "wersel_match"
+        
         # Clean up
         for k in list(base.keys()):
             if k.startswith("_") or k.lower().startswith("unnamed"):
                 base.pop(k)
         
-        tgt_col.insert_one(base)
-        print(f"MERGED | {base['BRAND']} | items={len(base['merge_items'])}")
+        # Upsert instead of insert
+        tgt_col.update_one(
+            {"merge_id": base["merge_id"], "sheet_name": base["sheet_name"]},
+            {"$set": base},
+            upsert=True
+        )
+        print(f"UPSERT MERGED | {base['BRAND']} | items={len(base['merge_items'])}")
 
     
     return {
