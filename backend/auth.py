@@ -9,7 +9,7 @@ from typing import Optional, Dict
 
 # Demo user credentials (hardcoded for client demo)
 DEMO_USER = {
-    # "email": "rosini.alexander@metora.co",
+    "email": "rosini.alexander@metora.co",
     "password": "Roshini@123",  # Plain text for demo only
     "name": "Rosini Alexander",
     "company": "Metora"
