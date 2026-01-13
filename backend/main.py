@@ -217,6 +217,7 @@ async def get_products(limit: int = 100, skip: int = 0):
         "UPC": 1,
         "merged_from_docs": 1,
         "merge_level": 1,
+        "llm_confidence_min": 1,
         "brand": 1,
         "flavour": 1,
         "size": 1

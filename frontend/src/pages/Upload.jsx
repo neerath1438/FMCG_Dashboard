@@ -75,7 +75,7 @@ const Upload = () => {
 
                         {/* Results */}
                         <div className="space-y-3">
-                            {Object.entries(uploadResult.data || {}).map(([sheetName, stats]) => (
+                            {Object.entries(uploadResult.data || uploadResult || {}).map(([sheetName, stats]) => (
                                 <Card key={sheetName} variant="glass">
                                     <div className="flex items-center justify-between">
                                         <div>
@@ -120,6 +120,26 @@ const Upload = () => {
                                 </div>
                             </div>
                         )}
+
+                        {/* LLM Trigger Button - Show if upload successful but LLM not run yet */}
+                        {/* {!llmResult && (uploadResult.data || uploadResult) && (
+                            <div className="space-y-3">
+                                <p className="text-sm text-gray-600">
+                                    Flow 1 (UPC Merging) completed. Run AI mastering to extract product attributes.
+                                </p>
+                                {Object.keys(uploadResult.data || uploadResult || {}).map(sheetName => (
+                                    <Button
+                                        key={sheetName}
+                                        onClick={() => handleTriggerLLM(sheetName)}
+                                        loading={processingLLM}
+                                        disabled={processingLLM}
+                                        className="w-full"
+                                    >
+                                        {processingLLM ? 'Running AI Mastering...' : `Run AI Mastering for ${sheetName}`}
+                                    </Button>
+                                ))}
+                            </div>
+                        )} */}
 
                         <Button variant="outline" onClick={resetUpload} className="w-full">
                             Upload Another File
