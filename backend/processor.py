@@ -5,6 +5,7 @@ import json
 import os
 import math
 import copy
+import time
 from openai import OpenAI
 import httpx
 from backend.database import get_collection
@@ -226,13 +227,33 @@ def process_excel_flow_1(file_contents):
                 else:
                     merged_record["merge_level"] = f"MERGED_{merged_count}_VARIANTS"
                 
+                # Add sheet_name for upsert tracking
+                merged_record["sheet_name"] = "wersel_match"
+                
                 single_stock_records.append(merged_record)
         
-        # Store in SINGLE_STOCK
+        # Store in SINGLE_STOCK with upsert logic
         single_stock_coll = get_collection("SINGLE_STOCK")
-        single_stock_coll.delete_many({})
+        
+        # Delete only records from this sheet_name
+        single_stock_coll.delete_many({"sheet_name": "wersel_match"})
+        
         if single_stock_records:
-            single_stock_coll.insert_many(single_stock_records)
+            # Use bulk upsert to prevent duplicates
+            operations = []
+            for record in single_stock_records:
+                # Upsert based on merge_id + sheet_name
+                operations.append(UpdateOne(
+                    {
+                        "merge_id": record["merge_id"],
+                        "sheet_name": record["sheet_name"]
+                    },
+                    {"$set": record},
+                    upsert=True
+                ))
+            
+            if operations:
+                single_stock_coll.bulk_write(operations)
         
         sheets_info[sheet_name] = {
             "raw_count": len(df),
@@ -357,6 +378,11 @@ Return JSON only:
         
         raw_content = raw_content.strip()
         
+        # Handle empty response
+        if not raw_content or raw_content == '{}':
+            print(f"Empty LLM response for '{item}' - using fallback")
+            raise ValueError("Empty response from LLM")
+        
         # Clean markdown code blocks if present
         if raw_content.startswith("```"):
             # Find first opening brace
@@ -366,13 +392,27 @@ Return JSON only:
                 raw_content = raw_content[start_idx:end_idx+1]
         
         data = json.loads(raw_content)
+        
+        # Validate required fields
+        if not data.get("brand") and not data.get("flavour"):
+            print(f"Invalid LLM data for '{item}' - missing brand/flavour")
+            raise ValueError("Missing required fields")
+            
+    except json.JSONDecodeError as e:
+        print(f"JSON Parse Error for '{item}': {e}")
+        print(f"RAW RESPONSE: {raw_content[:200] if raw_content else 'EMPTY'}")
+        # Fallback to default
+        data = {
+            "brand": "",
+            "flavour": "",
+            "size": "",
+            "base_item": item,
+            "removed_marketing_terms": [],
+            "confidence": 0.0
+        }
     except Exception as e:
         print(f"LLM Error for '{item}': {e}")
-        # Log the raw content for debugging
-        try:
-            print(f"RAW RESPONSE: {resp.choices[0].message.content}") 
-        except:
-            pass
+        # Fallback to default
         data = {
             "brand": "",
             "flavour": "",
@@ -443,11 +483,12 @@ def process_llm_mastering_flow_2(sheet_name):
     src_col = get_collection("SINGLE_STOCK")
     tgt_col = get_collection("MASTER_STOCK")
     
-    # Clear previous master data
-    tgt_col.delete_many({})
+    # Clear previous master data for this sheet only
+    tgt_col.delete_many({"sheet_name": "wersel_match"})
     
-    docs = list(src_col.find())
-    print(f"Loaded {len(docs)} docs from SINGLE_STOCK")
+    # Only process records from this sheet_name
+    docs = list(src_col.find({"sheet_name": "wersel_match"}))
+    print(f"Loaded {len(docs)} docs from SINGLE_STOCK for sheet: wersel_match")
 
     
     groups = {}
@@ -459,10 +500,29 @@ def process_llm_mastering_flow_2(sheet_name):
     unique_items = list(set([d.get("ITEM") for d in docs if d.get("ITEM")]))
     
     norm_map = {}
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        results = list(executor.map(normalize_item_llm, unique_items))
-        for item, res in zip(unique_items, results):
-            norm_map[item] = res
+    
+    # Process in batches to avoid rate limits
+    batch_size = 50
+    total_batches = (len(unique_items) + batch_size - 1) // batch_size
+    
+    print(f"Processing {len(unique_items)} unique items in {total_batches} batches...")
+    
+    for batch_num in range(total_batches):
+        start_idx = batch_num * batch_size
+        end_idx = min((batch_num + 1) * batch_size, len(unique_items))
+        batch_items = unique_items[start_idx:end_idx]
+        
+        print(f"Batch {batch_num + 1}/{total_batches}: Processing {len(batch_items)} items...")
+        
+        with ThreadPoolExecutor(max_workers=5) as executor:  # Reduced from 10 to 5
+            results = list(executor.map(normalize_item_llm, batch_items))
+            for item, res in zip(batch_items, results):
+                norm_map[item] = res
+        
+        # Wait between batches to avoid rate limits
+        if batch_num < total_batches - 1:
+            print(f"Waiting 10 seconds before next batch...")
+            time.sleep(10)
 
             
     # 2. Grouping Phase: Consistently group docs based on extracted attributes + Strict Keys
@@ -574,6 +634,9 @@ def process_llm_mastering_flow_2(sheet_name):
             )
 
             doc["merge_id"] = doc.get("merge_id") or f"{doc['BRAND']}_{uuid.uuid4().hex}"
+            
+            # Add sheet_name for tracking
+            doc["sheet_name"] = "wersel_match"
 
             
             # Clean up internal fields
@@ -581,8 +644,13 @@ def process_llm_mastering_flow_2(sheet_name):
                 if k.startswith("_") or k.lower().startswith("unnamed"):
                     doc.pop(k)
             
-            tgt_col.insert_one(doc)
-            print(f"INSERT AS-IS | {doc['ITEM']}")
+            # Upsert instead of insert
+            tgt_col.update_one(
+                {"merge_id": doc["merge_id"], "sheet_name": doc["sheet_name"]},
+                {"$set": doc},
+                upsert=True
+            )
+            print(f"UPSERT AS-IS | {doc['ITEM']}")
             continue
 
         
@@ -629,13 +697,21 @@ def process_llm_mastering_flow_2(sheet_name):
         )
 
         
+        # Add sheet_name for tracking
+        base["sheet_name"] = "wersel_match"
+        
         # Clean up
         for k in list(base.keys()):
             if k.startswith("_") or k.lower().startswith("unnamed"):
                 base.pop(k)
         
-        tgt_col.insert_one(base)
-        print(f"MERGED | {base['BRAND']} | items={len(base['merge_items'])}")
+        # Upsert instead of insert
+        tgt_col.update_one(
+            {"merge_id": base["merge_id"], "sheet_name": base["sheet_name"]},
+            {"$set": base},
+            upsert=True
+        )
+        print(f"UPSERT MERGED | {base['BRAND']} | items={len(base['merge_items'])}")
 
     
     return {

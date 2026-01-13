@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// API base URL - Direct backend access
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://40.81.140.169:8000';
+
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },

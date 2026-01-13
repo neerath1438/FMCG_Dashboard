@@ -93,7 +93,7 @@ const Upload = () => {
                                             loading={processingLLM}
                                             disabled={processingLLM}
                                         >
-                                            Run LLM Mastering
+                                            Run Wersel AI Agent Mastering
                                         </Button>
                                     </div>
                                 </Card>
@@ -158,7 +158,7 @@ const Upload = () => {
                     <div className="flex items-start gap-3">
                         <Badge variant="glass-pink">2</Badge>
                         <div>
-                            <h4 className="font-semibold text-gray-900">Trigger LLM Mastering</h4>
+                            <h4 className="font-semibold text-gray-900">Trigger Wersel AI Agent Mastering</h4>
                             <p className="text-sm text-gray-600 mt-1">
                                 Run AI-powered product mastering to extract brand, flavour, and size attributes (Flow 2).
                             </p>

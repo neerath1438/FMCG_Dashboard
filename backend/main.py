@@ -21,18 +21,35 @@ from typing import Optional
 
 app = FastAPI(title="FMCG Product Mastering Platform")
 
-# CORS Configuration from environment variables
-cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
-cors_methods = os.getenv("CORS_ALLOW_METHODS", "GET,POST,PUT,DELETE,OPTIONS").split(",")
-cors_headers = os.getenv("CORS_ALLOW_HEADERS", "Content-Type,Authorization,X-Requested-With").split(",")
-cors_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
-
+# CORS Configuration - Support direct port access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if cors_origins != ["*"] else ["*"],
-    allow_methods=cors_methods,
-    allow_headers=cors_headers,
-    allow_credentials=cors_credentials,
+    allow_origins=[
+        # Production - Direct Docker ports
+        "http://40.81.140.169:3000",
+        "http://40.81.140.169:8000",
+        
+        # Production - HTTPS (future)
+        "https://retail-5465",
+        "https://retail-5465-api",
+        
+        # Production - HTTP with custom ports
+        "http://retail-5465:8080",
+        "http://retail-5465-api:8081",
+        "http://40.81.140.169:8080",
+        "http://40.81.140.169:8081",
+        
+        # Development
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ============ Pydantic Models ============
@@ -134,33 +151,56 @@ async def trigger_llm_mastering(sheet_name: str):
 
 @app.get("/dashboard/summary")
 async def get_summary():
+    """Get dashboard summary with merge statistics"""
+    single_stock_coll = get_collection("SINGLE_STOCK")
     master_coll = get_collection("MASTER_STOCK")
     
+    # Count documents in each collection
+    single_stock_count = single_stock_coll.count_documents({})
+    master_stock_count = master_coll.count_documents({})
+    
+    # Calculate merge count
+    items_merged = single_stock_count - master_stock_count if single_stock_count > master_stock_count else 0
+    
+    # Get detailed statistics from MASTER_STOCK
     pipeline = [
         {
             "$group": {
                 "_id": None,
-                "total_master_products": {"$sum": 1},
-                "total_upcs": {"$sum": {"$size": "$merged_upcs"}},
-                "low_confidence_count": {"$sum": {"$cond": ["$is_low_confidence", 1, 0]}},
-                "total_docs_merged": {"$sum": "$merged_from_docs"}
+                "unique_upcs": {"$addToSet": "$UPC"},
+                "merged_items": {"$sum": {"$cond": [{"$gt": ["$merged_from_docs", 1]}, 1, 0]}},
+                "single_items": {"$sum": {"$cond": [{"$lte": ["$merged_from_docs", 1]}, 1, 0]}},
+                "low_confidence_count": {"$sum": {"$cond": [{"$lt": ["$llm_confidence_min", 0.8]}, 1, 0]}}
             }
         }
     ]
     
     result = list(master_coll.aggregate(pipeline))
-    summary = result[0] if result else {
-        "total_master_products": 0,
-        "total_upcs": 0,
-        "low_confidence_count": 0,
-        "total_docs_merged": 0
-    }
+    
+    if result:
+        unique_upcs_count = len(result[0].get("unique_upcs", []))
+        merged_items = result[0].get("merged_items", 0)
+        single_items = result[0].get("single_items", 0)
+        low_confidence = result[0].get("low_confidence_count", 0)
+    else:
+        unique_upcs_count = 0
+        merged_items = 0
+        single_items = 0
+        low_confidence = 0
+    
+    # Get unique brands count (using original BRAND column)
+    unique_brands = master_coll.distinct("BRAND")
+    unique_brands_count = len([b for b in unique_brands if b])  # Filter out empty/null brands
     
     return {
-        "raw_rows": summary["total_docs_merged"],
-        "unique_upcs": summary["total_upcs"],
-        "master_products": summary["total_master_products"],
-        "low_confidence": summary["low_confidence_count"]
+        "single_stock_rows": single_stock_count,
+        "master_stock_rows": master_stock_count,
+        "items_merged": items_merged,
+        "unique_upcs": unique_upcs_count,
+        "unique_brands": unique_brands_count,
+        "merged_items": merged_items,
+        "single_items": single_items,
+        "low_confidence": low_confidence
     }
 
 @app.get("/dashboard/products")
@@ -206,21 +246,52 @@ async def chatbot_query(request: dict):
 
 @app.get("/export/master-stock")
 async def export_master_stock():
-    """Export MASTER_STOCK collection to Excel"""
+    """Export MASTER_STOCK collection to Excel with clean columns"""
     coll = get_collection("MASTER_STOCK")
     docs = list(coll.find({}, {"_id": 0}))
     
     if not docs:
         return {"error": "No data to export"}
     
-    # Flatten the data if needed (pandas handles dicts well)
+    # Flatten the data
     df = pd.DataFrame(docs)
     
-    # Ensure merged_upcs and merge_items are strings for Excel
-    if "merged_upcs" in df.columns:
-        df["merged_upcs"] = df["merged_upcs"].apply(lambda x: ", ".join(map(str, x)) if isinstance(x, list) else x)
+    # Define essential columns to export (remove duplicates and internal fields)
+    essential_columns = [
+        # Identifiers
+        "UPC", "merge_id", "sheet_name",
+        
+        # LLM Extracted (Clean versions)
+        "brand", "flavour", "size", "normalized_item",
+        
+        # Original Product Info (only if LLM fields don't exist)
+        "ITEM", "MANUFACTURER", "Product Segment",
+        
+        # Attributes
+        "Markets", "MPACK", "Facts", 
+        
+        # Monthly Data (all w/e columns)
+        "Dec 23 - w/e 31/12/23",
+        "Jan 24 - w/e 31/01/24", "Feb 24 - w/e 29/02/24", "Mar 24 - w/e 31/03/24",
+        "Apr 24 - w/e 30/04/24", "May 24 - w/e 31/05/24", "Jun 24 - w/e 30/06/24",
+        "Jul 24 - w/e 31/07/24", "Aug 24 - w/e 31/08/24", "Sep 24 - w/e 30/09/24",
+        "Oct 24 - w/e 31/10/24", "Nov 24 - w/e 30/11/24",
+        "MAT Nov'24",
+        
+        # Merge Metadata
+        "merge_items", "merged_from_docs", "merge_level", "merge_rule",
+        "llm_confidence_min"
+    ]
+    
+    # Select only columns that exist in the dataframe
+    export_columns = [col for col in essential_columns if col in df.columns]
+    df = df[export_columns]
+    
+    # Format list columns for Excel
     if "merge_items" in df.columns:
         df["merge_items"] = df["merge_items"].apply(lambda x: " | ".join(map(str, x)) if isinstance(x, list) else x)
+    if "merged_upcs" in df.columns:
+        df["merged_upcs"] = df["merged_upcs"].apply(lambda x: ", ".join(map(str, x)) if isinstance(x, list) else x)
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
