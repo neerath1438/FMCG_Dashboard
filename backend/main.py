@@ -21,18 +21,17 @@ from typing import Optional
 
 app = FastAPI(title="FMCG Product Mastering Platform")
 
-# CORS Configuration from environment variables
-cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
-cors_methods = os.getenv("CORS_ALLOW_METHODS", "GET,POST,PUT,DELETE,OPTIONS").split(",")
-cors_headers = os.getenv("CORS_ALLOW_HEADERS", "Content-Type,Authorization,X-Requested-With").split(",")
-cors_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
-
+# CORS Configuration - Custom domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if cors_origins != ["*"] else ["*"],
-    allow_methods=cors_methods,
-    allow_headers=cors_headers,
-    allow_credentials=cors_credentials,
+    allow_origins=[
+        "https://retail-5465",  # Production frontend
+        "http://localhost:3000",  # Local development
+        "http://localhost:5173",  # Vite dev server
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ============ Pydantic Models ============
