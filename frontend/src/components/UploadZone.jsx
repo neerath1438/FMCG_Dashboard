@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Upload as UploadIcon, X, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
 import Button from './ui/Button';
 
-const UploadZone = ({ onUpload, accept = '.xlsx,.xls', maxSize = 10 * 1024 * 1024 }) => {
+const UploadZone = ({ onUpload, accept = '.xlsx,.xls', maxSize = 100 * 1024 * 1024 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [file, setFile] = useState(null);
     const [error, setError] = useState(null);
