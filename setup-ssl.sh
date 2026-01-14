@@ -30,22 +30,22 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Step 1: Check DNS resolution
+# Step 1: Check DNS resolution (Warning only, does not exit)
 echo -e "${YELLOW}Step 1: Checking DNS resolution...${NC}"
 if nslookup $FRONTEND_DOMAIN | grep -q "20.0.161.242"; then
     echo -e "${GREEN}✓ Frontend domain DNS is correct${NC}"
 else
-    echo -e "${RED}✗ Frontend domain DNS not pointing to 20.0.161.242${NC}"
-    echo -e "${YELLOW}Please update your DNS records and wait for propagation${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠ Frontend domain DNS not yet pointing to 20.0.161.242${NC}"
+    echo -e "${YELLOW}⚠ SSL certificate generation may fail if DNS is not propagated${NC}"
+    echo -e "${YELLOW}⚠ Continuing anyway... (you can update DNS and re-run later)${NC}"
 fi
 
 if nslookup $BACKEND_DOMAIN | grep -q "20.0.161.242"; then
     echo -e "${GREEN}✓ Backend domain DNS is correct${NC}"
 else
-    echo -e "${RED}✗ Backend domain DNS not pointing to 20.0.161.242${NC}"
-    echo -e "${YELLOW}Please update your DNS records and wait for propagation${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠ Backend domain DNS not yet pointing to 20.0.161.242${NC}"
+    echo -e "${YELLOW}⚠ SSL certificate generation may fail if DNS is not propagated${NC}"
+    echo -e "${YELLOW}⚠ Continuing anyway... (you can update DNS and re-run later)${NC}"
 fi
 
 echo ""
@@ -102,7 +102,10 @@ echo ""
 echo -e "${YELLOW}Step 5: Deploying Nginx configuration...${NC}"
 
 # Check if config file exists in current directory
-if [ -f "./fmcg-retail.conf" ]; then
+if [ -f "./nginx/fmcg-retail.conf" ]; then
+    cp ./nginx/fmcg-retail.conf $NGINX_CONF_PATH
+    echo -e "${GREEN}✓ Nginx config copied from ./nginx directory${NC}"
+elif [ -f "./fmcg-retail.conf" ]; then
     cp ./fmcg-retail.conf $NGINX_CONF_PATH
     echo -e "${GREEN}✓ Nginx config copied from current directory${NC}"
 elif [ -f "/tmp/fmcg-retail.conf" ]; then
@@ -110,7 +113,7 @@ elif [ -f "/tmp/fmcg-retail.conf" ]; then
     echo -e "${GREEN}✓ Nginx config copied from /tmp${NC}"
 else
     echo -e "${RED}✗ Nginx config file not found${NC}"
-    echo -e "${YELLOW}Please upload fmcg-retail.conf to current directory or /tmp${NC}"
+    echo -e "${YELLOW}Please ensure fmcg-retail.conf exists in ./nginx/ directory${NC}"
     exit 1
 fi
 
