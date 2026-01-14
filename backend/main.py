@@ -413,11 +413,28 @@ app.mount("/exports", StaticFiles(directory=export_dir), name="exports")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=8080,
-        ssl_keyfile="/etc/letsencrypt/live/retail-api.wersel.co.uk/privkey.pem",
-        ssl_certfile="/etc/letsencrypt/live/retail-api.wersel.co.uk/fullchain.pem"
-    )
+    import os
+    
+    # Check if running in production (SSL certificates exist)
+    ssl_keyfile = "/etc/letsencrypt/live/retail-api.wersel.co.uk/privkey.pem"
+    ssl_certfile = "/etc/letsencrypt/live/retail-api.wersel.co.uk/fullchain.pem"
+    
+    use_ssl = os.path.exists(ssl_keyfile) and os.path.exists(ssl_certfile)
+    
+    if use_ssl:
+        # Production with SSL
+        uvicorn.run(
+            app, 
+            host="0.0.0.0", 
+            port=8080,
+            ssl_keyfile=ssl_keyfile,
+            ssl_certfile=ssl_certfile
+        )
+    else:
+        # Local development without SSL
+        uvicorn.run(
+            app, 
+            host="0.0.0.0", 
+            port=8080
+        )
 
