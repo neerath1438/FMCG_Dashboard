@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 FRONTEND_DOMAIN="retail.wersel.co.uk"
 BACKEND_DOMAIN="retail-api.wersel.co.uk"
-EMAIL="your-email@example.com"  # CHANGE THIS!
+EMAIL="vishnu.t@wersel.io"
 NGINX_CONF_PATH="/etc/nginx/sites-available/fmcg-retail.conf"
 NGINX_ENABLED_PATH="/etc/nginx/sites-enabled/fmcg-retail.conf"
 
