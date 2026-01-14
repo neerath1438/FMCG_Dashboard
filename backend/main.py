@@ -25,19 +25,19 @@ app = FastAPI(title="FMCG Product Mastering Platform")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # Production - Actual Domains
+        "https://retail.wersel.co.uk",
+        "https://www.retail.wersel.co.uk",
+        "https://retail-api.wersel.co.uk",
+        "https://www.retail-api.wersel.co.uk",
+        "http://retail.wersel.co.uk",
+        "http://www.retail.wersel.co.uk",
+        "http://retail-api.wersel.co.uk",
+        "http://www.retail-api.wersel.co.uk",
+        
         # Production - Direct Docker ports
         "http://40.81.140.169:3000",
         "http://40.81.140.169:8000",
-        
-        # Production - HTTPS (future)
-        "https://retail-5465",
-        "https://retail-5465-api",
-        
-        # Production - HTTP with custom ports
-        "http://retail-5465:8080",
-        "http://retail-5465-api:8081",
-        "http://40.81.140.169:8080",
-        "http://40.81.140.169:8081",
         
         # Development
         "http://localhost:3000",
@@ -396,5 +396,11 @@ app.mount("/exports", StaticFiles(directory=export_dir), name="exports")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8080,
+        ssl_keyfile="/etc/letsencrypt/live/retail-api.wersel.co.uk/privkey.pem",
+        ssl_certfile="/etc/letsencrypt/live/retail-api.wersel.co.uk/fullchain.pem"
+    )
 

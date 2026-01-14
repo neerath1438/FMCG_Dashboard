@@ -21,12 +21,12 @@ services:
     container_name: fmcg_backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8080:8080" # Changed from 8000:8000
     environment:
       - MONGO_URI=mongodb://mongodb:27017/fmcg_mastering
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       # CORS Configuration
-      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://fmcg_frontend:80
+      - CORS_ORIGINS=http://localhost:3001,http://127.0.0.1:3001,https://retail.wersel.co.uk:3001
       - CORS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS
       - CORS_ALLOW_HEADERS=Content-Type,Authorization,X-Requested-With
       - CORS_ALLOW_CREDENTIALS=true
@@ -35,6 +35,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./.env:/app/backend/.env
+      - /etc/letsencrypt:/etc/letsencrypt:ro # SSL certificates
     networks:
       - fmcg_network
 
@@ -46,9 +47,11 @@ services:
     container_name: fmcg_frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "3001:80" # Changed from 3000:80
     depends_on:
       - backend
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro # SSL certificates
     networks:
       - fmcg_network
 
