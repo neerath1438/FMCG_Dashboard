@@ -57,10 +57,15 @@ apt install -y certbot python3-certbot-nginx > /dev/null 2>&1
 echo -e "${GREEN}✓ Certbot installed${NC}"
 echo ""
 
-# Step 3: Stop Nginx temporarily (to avoid port conflicts)
-echo -e "${YELLOW}Step 3: Stopping Nginx temporarily...${NC}"
-systemctl stop nginx || true
-echo -e "${GREEN}✓ Nginx stopped${NC}"
+# Step 3: Check if Nginx is running
+echo -e "${YELLOW}Step 3: Checking Nginx status...${NC}"
+if systemctl is-active --quiet nginx; then
+    echo -e "${GREEN}✓ Nginx is running (will use nginx plugin)${NC}"
+    NGINX_RUNNING=true
+else
+    echo -e "${YELLOW}⚠ Nginx is not running (will use standalone mode)${NC}"
+    NGINX_RUNNING=false
+fi
 echo ""
 
 # Step 4: Obtain SSL certificates
@@ -69,13 +74,26 @@ echo -e "${YELLOW}Step 4: Obtaining SSL certificates...${NC}"
 # Frontend certificate
 if [ ! -d "/etc/letsencrypt/live/$FRONTEND_DOMAIN" ]; then
     echo -e "${YELLOW}Obtaining certificate for $FRONTEND_DOMAIN...${NC}"
-    certbot certonly --standalone \
-        -d $FRONTEND_DOMAIN \
-        -d www.$FRONTEND_DOMAIN \
-        --non-interactive \
-        --agree-tos \
-        --email $EMAIL \
-        --preferred-challenges http
+    
+    if [ "$NGINX_RUNNING" = true ]; then
+        # Use nginx plugin (doesn't require stopping nginx)
+        certbot certonly --nginx \
+            -d $FRONTEND_DOMAIN \
+            -d www.$FRONTEND_DOMAIN \
+            --non-interactive \
+            --agree-tos \
+            --email $EMAIL
+    else
+        # Use standalone mode
+        certbot certonly --standalone \
+            -d $FRONTEND_DOMAIN \
+            -d www.$FRONTEND_DOMAIN \
+            --non-interactive \
+            --agree-tos \
+            --email $EMAIL \
+            --preferred-challenges http
+    fi
+    
     echo -e "${GREEN}✓ Frontend certificate obtained${NC}"
 else
     echo -e "${GREEN}✓ Frontend certificate already exists${NC}"
@@ -84,13 +102,26 @@ fi
 # Backend certificate
 if [ ! -d "/etc/letsencrypt/live/$BACKEND_DOMAIN" ]; then
     echo -e "${YELLOW}Obtaining certificate for $BACKEND_DOMAIN...${NC}"
-    certbot certonly --standalone \
-        -d $BACKEND_DOMAIN \
-        -d www.$BACKEND_DOMAIN \
-        --non-interactive \
-        --agree-tos \
-        --email $EMAIL \
-        --preferred-challenges http
+    
+    if [ "$NGINX_RUNNING" = true ]; then
+        # Use nginx plugin (doesn't require stopping nginx)
+        certbot certonly --nginx \
+            -d $BACKEND_DOMAIN \
+            -d www.$BACKEND_DOMAIN \
+            --non-interactive \
+            --agree-tos \
+            --email $EMAIL
+    else
+        # Use standalone mode
+        certbot certonly --standalone \
+            -d $BACKEND_DOMAIN \
+            -d www.$BACKEND_DOMAIN \
+            --non-interactive \
+            --agree-tos \
+            --email $EMAIL \
+            --preferred-challenges http
+    fi
+    
     echo -e "${GREEN}✓ Backend certificate obtained${NC}"
 else
     echo -e "${GREEN}✓ Backend certificate already exists${NC}"
