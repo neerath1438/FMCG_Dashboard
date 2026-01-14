@@ -25,7 +25,18 @@ app = FastAPI(title="FMCG Product Mastering Platform")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        # Production - Actual Domains
+        # Production - Actual Domains with Ports
+        "https://retail.wersel.co.uk:3001",
+        "https://www.retail.wersel.co.uk:3001",
+        "http://retail.wersel.co.uk:3001",
+        "http://www.retail.wersel.co.uk:3001",
+        
+        "https://retail-api.wersel.co.uk:8080",
+        "https://www.retail-api.wersel.co.uk:8080",
+        "http://retail-api.wersel.co.uk:8080",
+        "http://www.retail-api.wersel.co.uk:8080",
+        
+        # Production - Without Ports (for future)
         "https://retail.wersel.co.uk",
         "https://www.retail.wersel.co.uk",
         "https://retail-api.wersel.co.uk",
@@ -35,16 +46,22 @@ app.add_middleware(
         "http://retail-api.wersel.co.uk",
         "http://www.retail-api.wersel.co.uk",
         
-        # Production - Direct Docker ports
-        "http://40.81.140.169:3000",
-        "http://40.81.140.169:8000",
+        # Production - Direct IP with Ports
+        "http://40.81.140.169:3001",
+        "http://40.81.140.169:8080",
+        "https://40.81.140.169:3001",
+        "https://40.81.140.169:8080",
         
         # Development
+        "http://localhost:3001",
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://localhost:8080",
         "http://localhost:8000",
+        "http://127.0.0.1:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080",
         "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
