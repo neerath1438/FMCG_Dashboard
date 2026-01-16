@@ -34,7 +34,6 @@ services:
       - mongodb
     volumes:
       - ./backend:/app/backend
-      - ./.env:/app/backend/.env
     networks:
       - fmcg_network
 
