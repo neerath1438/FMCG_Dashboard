@@ -48,9 +48,9 @@ app.add_middleware(
         
         # Production - Direct IP with Ports
         "http://20.0.161.242:3001",
-        "http://20.0.161.242:8080",
+        "http://20.0.161.242:8000",
         "https://20.0.161.242:3001",
-        "https://20.0.161.242:8080",
+        "https://20.0.161.242:8000",
         
         # Development
         "http://localhost:3001",
@@ -426,7 +426,7 @@ if __name__ == "__main__":
         uvicorn.run(
             app, 
             host="0.0.0.0", 
-            port=8080,
+            port=8000,
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile
         )
@@ -435,6 +435,6 @@ if __name__ == "__main__":
         uvicorn.run(
             app, 
             host="0.0.0.0", 
-            port=8080
+            port=8000
         )
 
