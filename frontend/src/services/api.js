@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base URL - Use environment variable or server IP
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://20.0.161.242:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://20.0.161.242:8001';
 
 const api = axios.create({
     baseURL: API_BASE_URL,

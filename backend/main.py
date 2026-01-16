@@ -48,9 +48,9 @@ app.add_middleware(
         
         # Production - Direct IP with Ports
         "http://20.0.161.242:3001",
-        "http://20.0.161.242:8000",
+        "http://20.0.161.242:8001",
         "https://20.0.161.242:3001",
-        "https://20.0.161.242:8000",
+        "https://20.0.161.242:8001",
         
         # Development
         "http://localhost:3001",
