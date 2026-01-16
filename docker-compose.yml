@@ -35,7 +35,6 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./.env:/app/backend/.env
-      - /etc/letsencrypt:/etc/letsencrypt:ro # SSL certificates
     networks:
       - fmcg_network
 
@@ -50,8 +49,6 @@ services:
       - "3001:80" # Changed from 3000:80
     depends_on:
       - backend
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro # SSL certificates
     networks:
       - fmcg_network
 
