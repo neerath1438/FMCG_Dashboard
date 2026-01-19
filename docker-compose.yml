@@ -25,9 +25,14 @@ services:
     environment:
       - MONGO_URI=mongodb://mongodb:27017/fmcg_mastering
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Azure Claude (Primary LLM)
       - AZURE_CLAUDE_ENDPOINT=${AZURE_CLAUDE_ENDPOINT}
       - AZURE_CLAUDE_API_KEY=${AZURE_CLAUDE_API_KEY}
       - AZURE_CLAUDE_MODEL_NAME=${AZURE_CLAUDE_MODEL_NAME}
+      # Azure OpenAI (Fallback LLM)
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
       # CORS Configuration
       - CORS_ORIGINS=http://localhost:3001,http://127.0.0.1:3001,https://retail.wersel.co.uk
       - CORS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS

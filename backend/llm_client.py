@@ -16,16 +16,25 @@ if not env_path.exists():
 
 class LLMClient:
     def __init__(self):
+        # Primary: Azure Claude
         self.use_azure = True
         self.azure_endpoint = os.getenv("AZURE_CLAUDE_ENDPOINT")
         self.azure_key = os.getenv("AZURE_CLAUDE_API_KEY")
         self.azure_model = os.getenv("AZURE_CLAUDE_MODEL_NAME", "claude-sonnet-4-5")
 
-        # Fallback OpenAI
-        self.openai_client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            http_client=httpx.Client()
-        )
+        # Fallback: Azure OpenAI (CEO requirement - use Azure, not direct OpenAI)
+        try:
+            from openai import AzureOpenAI
+            self.azure_openai_client = AzureOpenAI(
+                api_key=os.getenv("AZURE_OPENAI_KEY"),
+                api_version="2024-02-01",
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+            )
+            self.azure_openai_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
+            self.has_azure_openai = True
+        except Exception as e:
+            print(f"Azure OpenAI not configured: {e}")
+            self.has_azure_openai = False
         
         # Rate limiting
         self.last_request_time = 0
@@ -111,23 +120,28 @@ class LLMClient:
                         time.sleep(wait_time)
                         continue
 
-        # Fallback to OpenAI after all Azure retries exhausted
-        try:
-            print("Using OpenAI fallback...")
-            resp = self.openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            return resp.choices[0].message.content
-        except Exception as e:
-            print(f"OpenAI Error: {e}")
-            # Return empty JSON as last resort
-            return '{}'
+
+        # Fallback to Azure OpenAI after all Azure Claude retries exhausted
+        if self.has_azure_openai:
+            try:
+                print("Using Azure OpenAI fallback...")
+                resp = self.azure_openai_client.chat.completions.create(
+                    model=self.azure_openai_deployment,  # Uses deployment name from env
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message}
+                    ],
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                return resp.choices[0].message.content
+            except Exception as e:
+                print(f"Azure OpenAI Error: {e}")
+        else:
+            print("Azure OpenAI not configured - no fallback available")
+        
+        # Return empty JSON as last resort
+        return '{}'
 
 # Singleton instance
 llm_client = LLMClient()

@@ -56,14 +56,36 @@ def extract_size_val(size_str):
 def process_excel_flow_1(file_contents):
     """
     Flow 1: Strict UPC + Attribute merging with Size Tolerance.
+    Supports Excel (.xlsx, .xls) and CSV (.csv) files.
     Groups by UPC, Markets, MPACK, Facts to separate variants/metrics.
     Merges sizes within 5g tolerance inside each group.
     """
-    xl = pd.ExcelFile(file_contents)
+    import io
+    
+    # Detect file type and read accordingly
+    try:
+        # Try reading as Excel first
+        xl = pd.ExcelFile(file_contents)
+        is_excel = True
+        sheet_names = xl.sheet_names
+    except:
+        # If Excel fails, treat as CSV
+        is_excel = False
+        # Reset file pointer
+        if hasattr(file_contents, 'seek'):
+            file_contents.seek(0)
+        # Read CSV
+        df_csv = pd.read_csv(file_contents)
+        sheet_names = ['CSV_Data']  # Single sheet for CSV
+    
     sheets_info = {}
     
-    for sheet_name in xl.sheet_names:
-        df = xl.parse(sheet_name)
+    for sheet_name in sheet_names:
+        # Get DataFrame based on file type
+        if is_excel:
+            df = xl.parse(sheet_name)
+        else:
+            df = df_csv  # Use the CSV data
         
         # KEY COLUMN IDENTIFICATION
         # Normalize columns slightly for matching but keep original for access

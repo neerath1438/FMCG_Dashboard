@@ -9,10 +9,12 @@ from fastapi import HTTPException, UploadFile
 from typing import Tuple, List, Dict
 
 # Configuration
-ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
+ALLOWED_EXTENSIONS = {'.xlsx', '.xls', '.csv'}
 ALLOWED_MIMETYPES = {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # .xlsx
     'application/vnd.ms-excel',  # .xls
+    'text/csv',  # .csv
+    'application/csv',  # .csv (alternative)
 }
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
@@ -23,7 +25,7 @@ OPTIONAL_COLUMNS = ['ITEM', 'BRAND', 'MARKETS', 'MPACK', 'FACTS', 'NRMSIZE']
 
 def validate_file_type(file: UploadFile) -> bool:
     """
-    Validate uploaded file is Excel format
+    Validate uploaded file is Excel or CSV format
     
     Args:
         file: FastAPI UploadFile object
@@ -39,16 +41,16 @@ def validate_file_type(file: UploadFile) -> bool:
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type. Expected Excel file (.xlsx or .xls), got '{file_ext}'. "
-                   f"Please upload a valid Excel file."
+            detail=f"Invalid file type. Expected Excel or CSV file (.xlsx, .xls, or .csv), got '{file_ext}'. "
+                   f"Please upload a valid file."
         )
     
-    # Check MIME type
-    if file.content_type and file.content_type not in ALLOWED_MIMETYPES:
+    # Check MIME type (skip for CSV as browsers may send different MIME types)
+    if file.content_type and file.content_type not in ALLOWED_MIMETYPES and file_ext != '.csv':
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file format. Expected Excel file, got '{file.content_type}'. "
-                   f"Please upload a valid Excel file."
+            detail=f"Invalid file format. Expected Excel or CSV file, got '{file.content_type}'. "
+                   f"Please upload a valid file."
         )
     
     return True
