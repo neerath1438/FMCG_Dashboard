@@ -143,10 +143,67 @@ async def verify_auth(session_token: str = Header(None, alias="X-Session-Token")
 
 @app.post("/upload/excel")
 async def upload_excel(file: UploadFile = File(...)):
-    """Flow 1: UPC-based merging"""
-    contents = await file.read()
-    results = process_excel_flow_1(io.BytesIO(contents))
-    return {"status": "success", "data": results}
+    """
+    Flow 1: UPC-based merging with comprehensive validation
+    
+    Validates file type, size, format, columns, and data before processing
+    Returns detailed error messages and warnings to help users fix issues
+    """
+    from backend.file_validator import validate_upload_file
+    
+    try:
+        # Read file contents
+        contents = await file.read()
+        
+        # Comprehensive validation
+        xl, warnings = validate_upload_file(file, contents)
+        
+        # Process file (validation passed)
+        results = process_excel_flow_1(io.BytesIO(contents))
+        
+        # Return success with warnings if any
+        response = {
+            "status": "success",
+            "data": results,
+            "filename": file.filename,
+            "sheets_processed": list(results.keys()) if isinstance(results, dict) else []
+        }
+        
+        if warnings:
+            response["warnings"] = warnings
+        
+        return response
+        
+    except HTTPException:
+        # Re-raise validation errors (already have good messages)
+        raise
+        
+    except pd.errors.EmptyDataError:
+        raise HTTPException(
+            status_code=400,
+            detail="Excel file is empty or contains no data. Please add data to your file and try again."
+        )
+        
+    except pd.errors.ParserError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot parse Excel file. The file may be corrupted: {str(e)}"
+        )
+        
+    except Exception as e:
+        # Catch-all for unexpected errors with helpful message
+        error_msg = str(e)
+        if "No such file" in error_msg or "does not exist" in error_msg:
+            detail = "File upload failed. Please try again."
+        elif "Memory" in error_msg or "memory" in error_msg:
+            detail = "File is too large to process. Please reduce file size or split into multiple files."
+        else:
+            detail = f"Error processing file: {error_msg}"
+        
+        raise HTTPException(
+            status_code=500,
+            detail=detail
+        )
 
 @app.post("/process/llm-mastering/{sheet_name}")
 async def trigger_llm_mastering(sheet_name: str):
