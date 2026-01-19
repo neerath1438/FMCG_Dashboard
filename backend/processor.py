@@ -13,11 +13,8 @@ from backend.llm_client import llm_client
 from concurrent.futures import ThreadPoolExecutor
 from pymongo import UpdateOne
 
-# Initialize OpenAI client (Docker-compatible)
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    http_client=httpx.Client()
-)
+# Note: We use llm_client for all LLM operations (Azure Claude + Azure OpenAI fallback)
+# No direct OpenAI client needed here
 
 # Configuration
 LLM_CONFIDENCE_THRESHOLD = 0.80

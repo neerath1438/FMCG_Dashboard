@@ -26,7 +26,7 @@ class LLMClient:
         try:
             from openai import AzureOpenAI
             self.azure_openai_client = AzureOpenAI(
-                api_key=os.getenv("AZURE_OPENAI_KEY"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),  # SDK expects AZURE_OPENAI_API_KEY
                 api_version="2024-02-01",
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
             )
