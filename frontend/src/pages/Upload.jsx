@@ -12,19 +12,39 @@ const Upload = () => {
     const [error, setError] = useState(null);
     const [processingLLM, setProcessingLLM] = useState(false);
     const [llmResult, setLlmResult] = useState(null);
+    const [uploadController, setUploadController] = useState(null); // For cancellation
 
     const handleUpload = async (file) => {
+        // Create abort controller for cancellation
+        const controller = new AbortController();
+        setUploadController(controller);
+
         try {
             setUploadStatus('uploading');
             setError(null);
 
-            const result = await uploadAPI.uploadExcel(file);
+            const result = await uploadAPI.uploadExcel(file, controller.signal);
 
             setUploadStatus('success');
             setUploadResult(result.data);
         } catch (err) {
-            setUploadStatus('error');
-            setError(err.response?.data?.message || err.message || 'Upload failed');
+            if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+                setUploadStatus('idle');
+                setError('Upload cancelled by user');
+            } else {
+                setUploadStatus('error');
+                setError(err.response?.data?.message || err.message || 'Upload failed');
+            }
+        } finally {
+            setUploadController(null);
+        }
+    };
+
+    const handleCancelUpload = () => {
+        if (uploadController) {
+            uploadController.abort();
+            setUploadStatus('idle');
+            setError(null);
         }
     };
 
@@ -56,10 +76,32 @@ const Upload = () => {
                 )}
 
                 {uploadStatus === 'uploading' && (
-                    <div className="text-center py-12">
+                    <div className="text-center py-12 space-y-4">
                         <Loader className="animate-spin mx-auto text-pink-600 mb-4" size={48} />
-                        <p className="text-lg font-medium text-gray-900">Uploading and processing...</p>
-                        <p className="text-sm text-gray-500 mt-1">This may take a few moments</p>
+                        <div>
+                            <p className="text-lg font-medium text-gray-900">Uploading and processing...</p>
+                            <p className="text-sm text-gray-500 mt-1">This may take 5-10 minutes for large files</p>
+                        </div>
+
+                        {/* Progress Tips */}
+                        <div className="max-w-md mx-auto mt-6 p-4 bg-blue-50/70 backdrop-blur-sm border border-blue-200/50 rounded-xl text-left">
+                            <p className="text-sm font-medium text-blue-900 mb-2">Please wait:</p>
+                            <ul className="text-xs text-blue-700 space-y-1">
+                                <li>✓ Keep this tab open</li>
+                                <li>✓ Don't refresh the page</li>
+                                <li>✓ Large files (100MB) may take up to 10 minutes</li>
+                                <li>✓ Backend is processing your data</li>
+                            </ul>
+                        </div>
+
+                        {/* Cancel Button */}
+                        <Button
+                            variant="outline"
+                            onClick={handleCancelUpload}
+                            className="mt-4"
+                        >
+                            Cancel Upload
+                        </Button>
                     </div>
                 )}
 

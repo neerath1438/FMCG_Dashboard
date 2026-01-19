@@ -59,12 +59,13 @@ export const dashboardAPI = {
 };
 
 export const uploadAPI = {
-    uploadExcel: (file) => {
+    uploadExcel: (file, signal) => {
         const formData = new FormData();
         formData.append('file', file);
         return api.post('/upload/excel', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
             timeout: 900000, // 15 minutes for large file uploads (up to 100MB)
+            signal: signal, // Support for cancellation
         });
     },
     triggerLLMMastering: (sheetName) => api.post(`/process/llm-mastering/${sheetName}`),

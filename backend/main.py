@@ -7,7 +7,7 @@ root_dir = str(Path(__file__).parent.parent)
 if root_dir not in sys.path:
     sys.path.append(root_dir)
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from backend.processor import process_excel_flow_1
 from backend.database import get_collection
@@ -56,12 +56,12 @@ app.add_middleware(
         "http://localhost:3001",
         "http://localhost:3000",
         "http://localhost:5173",
-        "http://localhost:8080",
+        # "http://localhost:8080",
         "http://localhost:8000",
         "http://127.0.0.1:3001",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:8080",
+        # "http://127.0.0.1:8080",
         "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
@@ -142,7 +142,7 @@ async def verify_auth(session_token: str = Header(None, alias="X-Session-Token")
 # ============ Existing Endpoints ============
 
 @app.post("/upload/excel")
-async def upload_excel(file: UploadFile = File(...)):
+async def upload_excel(file: UploadFile = File(...), request: Request = None):
     """
     Flow 1: UPC-based merging with comprehensive validation
     
@@ -152,11 +152,23 @@ async def upload_excel(file: UploadFile = File(...)):
     from backend.file_validator import validate_upload_file
     
     try:
+        # Check if client is still connected before reading file
+        if request and await request.is_disconnected():
+            raise HTTPException(status_code=499, detail="Client disconnected")
+        
         # Read file contents
         contents = await file.read()
         
+        # Check again before validation (file read can take time)
+        if request and await request.is_disconnected():
+            raise HTTPException(status_code=499, detail="Client disconnected during file read")
+        
         # Comprehensive validation
         xl, warnings = validate_upload_file(file, contents)
+        
+        # Final check before expensive processing
+        if request and await request.is_disconnected():
+            raise HTTPException(status_code=499, detail="Client disconnected before processing")
         
         # Process file (validation passed)
         results = process_excel_flow_1(io.BytesIO(contents))
