@@ -35,7 +35,7 @@ services:
       - CORS_ALLOW_CREDENTIALS=true
     # Optimized for 100MB file uploads with extended timeouts
     command: >
-      uvicorn backend.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 800 --limit-max-requests 0 --limit-concurrency 100
+      uvicorn backend.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 800 --limit-concurrency 100
     depends_on:
       - mongodb
     volumes:
