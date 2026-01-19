@@ -8,6 +8,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 900000, // 15 minutes (900,000ms) for large file uploads
 });
 
 // Request interceptor to add session token
@@ -63,6 +64,7 @@ export const uploadAPI = {
         formData.append('file', file);
         return api.post('/upload/excel', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 900000, // 15 minutes for large file uploads (up to 100MB)
         });
     },
     triggerLLMMastering: (sheetName) => api.post(`/process/llm-mastering/${sheetName}`),
