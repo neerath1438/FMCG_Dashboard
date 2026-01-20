@@ -159,8 +159,10 @@ async def process_excel_flow_1(file_contents, request=None):
             group_keys.append(facts_col)
 
 
-        # ✅ ULTRA FAST: Process Groups in PARALLEL using ThreadPoolExecutor
-        print(f"[{sheet_name}] Processing {len(list(df.groupby(group_keys)))} groups in parallel...")
+        # ✅ ULTRA FAST: Cache groupby result (avoid calling it twice!)
+        print(f"[{sheet_name}] Creating groups (this may take a moment for large files)...")
+        groups_list = list(df.groupby(group_keys))
+        print(f"[{sheet_name}] Processing {len(groups_list)} groups in parallel...")
         
         def process_single_group(group_data):
             """Process a single group (for parallel execution)"""
@@ -265,9 +267,6 @@ async def process_excel_flow_1(file_contents, request=None):
                 bucket_records.append(merged_record)
             
             return bucket_records
-        
-        # Prepare groups for parallel processing
-        groups_list = list(df.groupby(group_keys))
         
         # ✅ PARALLEL EXECUTION: Use ThreadPoolExecutor with 4 workers
         single_stock_records = []
