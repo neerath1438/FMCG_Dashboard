@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -7,6 +8,7 @@ import Badge from '../components/ui/Badge';
 import { uploadAPI } from '../services/api';
 
 const Upload = () => {
+    const navigate = useNavigate();
     const [uploadStatus, setUploadStatus] = useState('idle'); // idle, uploading, success, error
     const [uploadResult, setUploadResult] = useState(null);
     const [error, setError] = useState(null);
@@ -27,6 +29,13 @@ const Upload = () => {
 
             setUploadStatus('success');
             setUploadResult(result.data);
+
+            // ✅ Automatically trigger Flow 2 (AI Mastering) after upload success
+            const sheetName = result.data.sheets_processed?.[0];
+            if (sheetName) {
+                console.log(`Auto-triggering Flow 2 for sheet: ${sheetName}`);
+                await handleTriggerLLM(sheetName);
+            }
         } catch (err) {
             if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
                 setUploadStatus('idle');
@@ -53,6 +62,10 @@ const Upload = () => {
             setProcessingLLM(true);
             const response = await uploadAPI.triggerLLMMastering(sheetName);
             setLlmResult(response.data);
+            // Redirect to dashboard after a short delay to show success
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 1500);
         } catch (err) {
             setError(err.response?.data?.message || err.message || 'LLM processing failed');
         } finally {

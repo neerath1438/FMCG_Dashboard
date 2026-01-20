@@ -589,6 +589,15 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     
     print(f"Processing {len(unique_items)} unique items in {total_batches} batches...")
     
+    # ✅ Strategy 2: Pre-load cache from MongoDB to avoid 10,000 individual queries
+    try:
+        cache_coll = get_collection("LLM_CACHE_STORAGE")
+        existing_cache = {doc["item"]: doc["result"] for doc in cache_coll.find({"item": {"$in": unique_items}})}
+        llm_cache.update(existing_cache)
+        print(f"Pre-loaded {len(existing_cache)} items from persistent cache.")
+    except Exception as e:
+        print(f"Error pre-loading cache: {e}")
+
     for batch_num in range(total_batches):
         # Check for disconnection before starting a new batch of LLM calls
         if request and await request.is_disconnected():
@@ -601,15 +610,14 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         
         print(f"Batch {batch_num + 1}/{total_batches}: Processing {len(batch_items)} items...")
         
-        with ThreadPoolExecutor(max_workers=5) as executor:  # Reduced from 10 to 5
+        with ThreadPoolExecutor(max_workers=50) as executor:  # Increased for ultra-fast processing
             results = list(executor.map(normalize_item_llm, batch_items))
             for item, res in zip(batch_items, results):
                 norm_map[item] = res
         
-        # Wait between batches to avoid rate limits
+        # Wait between batches minimized - relying on parallel execution
         if batch_num < total_batches - 1:
-            print(f"Waiting 10 seconds before next batch...")
-            time.sleep(10)
+            await asyncio.sleep(0.1) # Brief yield to keep server responsive
 
             
     # 2. Grouping Phase: Consistently group docs based on extracted attributes + Strict Keys
