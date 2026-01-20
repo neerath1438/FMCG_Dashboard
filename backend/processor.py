@@ -264,17 +264,36 @@ async def process_excel_flow_1(file_contents, request=None):
             
             return bucket_records
         
-        # ✅ PARALLEL EXECUTION: Use ThreadPoolExecutor with 4 workers
+        # ✅ BATCH-WISE PARALLEL EXECUTION: Process in chunks to avoid memory overflow
         single_stock_records = []
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            # Process groups in parallel
-            results = executor.map(process_single_group, groups_list)
-            
-            # Flatten results
-            for group_records in results:
-                single_stock_records.extend(group_records)
+        batch_size = 1000  # Process 1000 groups at a time
+        total_groups = len(groups_list)
         
-        print(f"[{sheet_name}] Parallel processing complete: {len(single_stock_records)} records created")
+        print(f"[{sheet_name}] Starting batch-wise parallel processing...")
+        
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            for batch_start in range(0, total_groups, batch_size):
+                # Check for disconnection
+                if request and await request.is_disconnected():
+                    print(f"Stopping Flow 1: Client disconnected during batch processing")
+                    return sheets_info
+                
+                batch_end = min(batch_start + batch_size, total_groups)
+                batch_groups = groups_list[batch_start:batch_end]
+                
+                # Process this batch in parallel
+                batch_results = list(executor.map(process_single_group, batch_groups))
+                
+                # Flatten and collect results
+                for group_records in batch_results:
+                    single_stock_records.extend(group_records)
+                
+                # Progress update
+                print(f"[{sheet_name}] Processed {batch_end}/{total_groups} groups ({len(single_stock_records)} records created)")
+                
+                await asyncio.sleep(0)  # Yield for disconnect checks
+        
+        print(f"[{sheet_name}] Parallel processing complete: {len(single_stock_records)} total records")
         
         # Store in SINGLE_STOCK with BATCH upsert (1000 records per batch)
         single_stock_coll = get_collection("SINGLE_STOCK")
