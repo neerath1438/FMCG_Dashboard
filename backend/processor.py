@@ -39,14 +39,11 @@ def save_to_llm_cache(item, result):
         upsert=True
     )
 
-# Pre-compile regex for speed (re-use across 100k+ rows)
-SIZE_REGEX = re.compile(r"(\d+(\.\d+)?)")
-
 def extract_size_val(size_str):
     """Extract numeric size value from string (e.g. '130g' -> 130.0)."""
     if not isinstance(size_str, str):
         return 0.0
-    match = SIZE_REGEX.search(size_str)
+    match = re.search(r"(\d+(\.\d+)?)", size_str)
     if match:
         try:
             return float(match.group(1))
@@ -145,14 +142,6 @@ async def process_excel_flow_1(file_contents, request=None):
         
         # Filter valid UPCs
         df = df[df[upc_col].notnull()].copy()
-        print(f"[{sheet_name}] Starting UPC-based merging for {len(df)} rows...")
-        
-        # SPEED OPTIMIZATION: Pre-calculate size values once for the entire dataframe
-        # This avoids calling regex 180,000+ times inside the groupby loop.
-        if size_col:
-            df["_size_val"] = df[size_col].astype(str).apply(extract_size_val)
-        else:
-            df["_size_val"] = 0.0
         
         # PREPARE FOR GROUPING
         # Fill NaNs for grouping keys to avoid exclusion
@@ -169,132 +158,170 @@ async def process_excel_flow_1(file_contents, request=None):
             df[facts_col] = df[facts_col].fillna(fill_val)
             group_keys.append(facts_col)
 
-        # ULTRA FAST VECTORIZED PROCESSING
-        # 1. Sort the entire dataframe by group keys and size
-        print(f"[{sheet_name}] Sorting records for vectorized processing...")
-        df = df.sort_values(by=group_keys + ["_size_val"]).reset_index(drop=True)
 
-        # 2. Detect Cluster Boundaries (Vectorized)
-        # Identify where group keys change
-        group_changed = pd.Series(False, index=df.index)
-        for key in group_keys:
-            group_changed |= (df[key] != df[key].shift(1))
+        # ✅ ULTRA FAST: Process Groups in PARALLEL using ThreadPoolExecutor
+        print(f"[{sheet_name}] Processing {len(list(df.groupby(group_keys)))} groups in parallel...")
+        
+        def process_single_group(group_data):
+            """Process a single group (for parallel execution)"""
+            group_ids, group = group_data
             
-        # Identify where size difference > 5.0
-        size_diff = df["_size_val"].diff().abs().fillna(0) > 5.0
-        
-        # New cluster starts if group keys change OR size diff > 5.0
-        cluster_start = group_changed | (size_diff & ~group_changed)
-        df["_cluster_id"] = cluster_start.cumsum()
-
-        # 3. Mass Aggregation (Vectorized)
-        print(f"[{sheet_name}] Performing mass aggregation on {df['_cluster_id'].nunique()} clusters...")
-        
-        # Define how to aggregate each column
-        agg_map = {
-            upc_col: 'first',
-            "_size_val": 'first', # For metadata
-        }
-        for col in descriptive_cols:
-            if col != upc_col: agg_map[col] = 'first'
-        for col in monthly_cols:
-            agg_map[col] = 'sum'
+            # Parse sizes for tolerance handling
+            group = group.copy()
+            if size_col:
+                group["_size_val"] = group[size_col].astype(str).apply(extract_size_val)
+                # Sort by size to make bucketing easier
+                group = group.sort_values("_size_val")
+            else:
+                group["_size_val"] = 0.0
             
-        # Add special aggregations
-        if item_col:
-            # Collect list of item names
-            agg_map[item_col] = lambda x: list(x)
-        
-        # Compute everything in one go
-        df_merged = df.groupby("_cluster_id").agg(agg_map)
-        
-        # Add counts
-        df_merged["merged_from_docs"] = df.groupby("_cluster_id").size()
-
-        # 4. Final Record Construction (Ultra-Fast Vectorized)
-        print(f"[{sheet_name}] Constructing final master records (Vectorized)...")
-        
-        # Pre-calculate metadata base
-        merge_rule_base = "UPC"
-        if market_col: merge_rule_base += " + Market"
-        if mpack_col: merge_rule_base += " + MPack"
-        if facts_col: merge_rule_base += " + Facts"
-        
-        # Convert the entire aggregated DF to records list at once (Lightning Fast)
-        master_records_raw = df_merged.reset_index().to_dict('records')
-        single_stock_records = []
-        
-        # Now we just need to add the Unique/calculated fields
-        # Processing in construction chunks to keep is_disconnected check reactive
-        const_chunk_size = 1000
-        for i in range(0, len(master_records_raw), const_chunk_size):
-            if request and await request.is_disconnected():
-                print(f"Stopping Flow 1: Client disconnected during record construction")
-                return sheets_info
+            # Bucketing Logic (5g tolerance)
+            buckets = []
+            current_bucket = []
             
-            chunk = master_records_raw[i:i + const_chunk_size]
-            for row in chunk:
-                brand = str(row.get("BRAND", "UNKNOWN"))
-                merged_count = int(row["merged_from_docs"])
+            for _, row in group.iterrows():
+                if not current_bucket:
+                    current_bucket.append(row)
+                    continue
                 
-                # Metadata Injection
-                row["merge_id"] = f"{brand}_{uuid.uuid4().hex}"
-                row["merged_from_docs"] = merged_count
-                row["merge_rule"] = merge_rule_base + (" + Size(5g)" if size_col and merged_count > 1 else "")
-                row["merged_upcs"] = [str(row[upc_col])]
-                row["merge_level"] = "NO_MERGE" if merged_count == 1 else f"MERGED_{merged_count}_VARIANTS"
-                row["sheet_name"] = "wersel_match"
+                prev_row = current_bucket[-1]
+                diff = abs(row["_size_val"] - prev_row["_size_val"])
                 
-                # Create merge_items list AND preserve ITEM field for Flow 2
-                if item_col:
-                    items_list = row.get(item_col, [])
-                    # Ensure it's a list
-                    if not isinstance(items_list, list):
-                        items_list = [items_list]
-                    row["merge_items"] = items_list
-                    # Preserve ITEM field with first item name for Flow 2 AI processing
-                    row["ITEM"] = items_list[0] if items_list else f"UPC_{row[upc_col]}"
+                if diff <= 5.0:
+                    current_bucket.append(row)
                 else:
-                    row["merge_items"] = [f"UPC_{row[upc_col]}"] * merged_count
-                    row["ITEM"] = f"UPC_{row[upc_col]}"
+                    buckets.append(current_bucket)
+                    current_bucket = [row]
+            
+            if current_bucket:
+                buckets.append(current_bucket)
+            
+            # Process each bucket (Create ONE record per bucket)
+            bucket_records = []
+            for bucket in buckets:
+                base_row = bucket[0]
+                merged_count = len(bucket)
                 
-                # Cleanup internal agg fields
-                row.pop("_cluster_id", None)
-                row.pop("_size_val", None)
+                # Get all item names in this bucket
+                product_names = []
+                if item_col:
+                    product_names = [r[item_col] for r in bucket]
+                else:
+                    product_names = [f"UPC_{base_row[upc_col]}"] * merged_count
                 
-                single_stock_records.append(row)
-
-        # Store in SINGLE_STOCK with ultra-fast insert_many
+                # Base Record
+                merged_record = {"UPC": base_row[upc_col]}
+                
+                # Add Grouping Keys explicitly
+                if market_col: merged_record[market_col] = base_row[market_col]
+                if mpack_col: merged_record[mpack_col] = base_row[mpack_col]
+                if facts_col: merged_record[facts_col] = base_row[facts_col]
+                
+                # Add Descriptive Columns (Take from first)
+                for col in descriptive_cols:
+                    if col in base_row and col not in merged_record:
+                        merged_record[col] = base_row[col]
+                
+                # Sum Monthly Columns
+                for col in monthly_cols:
+                    total = 0.0
+                    if col in base_row: # Check existence in series
+                        for r in bucket:
+                            val = r.get(col, 0)
+                            try:
+                                f_val = float(val)
+                                if not math.isnan(f_val):
+                                    total += f_val
+                            except (ValueError, TypeError):
+                                pass
+                    merged_record[col] = total
+                
+                # Metadata
+                brand = merged_record.get("BRAND", "UNKNOWN")
+                merge_id = f"{brand}_{uuid.uuid4().hex}"
+                
+                merge_rule_parts = ["UPC"]
+                if market_col: merge_rule_parts.append("Market")
+                if mpack_col: merge_rule_parts.append("MPack")
+                if facts_col: merge_rule_parts.append("Facts")
+                if size_col and merged_count > 1: merge_rule_parts.append("Size(5g)")
+                
+                merged_record["merge_id"] = merge_id
+                merged_record["merge_items"] = product_names
+                # ✅ FIX: Preserve ITEM field for Flow 2
+                merged_record["ITEM"] = product_names[0] if product_names else f"UPC_{base_row[upc_col]}"
+                merged_record["merged_from_docs"] = merged_count
+                merged_record["merge_rule"] = " + ".join(merge_rule_parts)
+                merged_record["merged_upcs"] = [str(base_row[upc_col])]
+                
+                if merged_count == 1:
+                    merged_record["merge_level"] = "NO_MERGE"
+                else:
+                    merged_record["merge_level"] = f"MERGED_{merged_count}_VARIANTS"
+                
+                # Add sheet_name for upsert tracking
+                merged_record["sheet_name"] = "wersel_match"
+                
+                bucket_records.append(merged_record)
+            
+            return bucket_records
+        
+        # Prepare groups for parallel processing
+        groups_list = list(df.groupby(group_keys))
+        
+        # ✅ PARALLEL EXECUTION: Use ThreadPoolExecutor with 4 workers
+        single_stock_records = []
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            # Process groups in parallel
+            results = executor.map(process_single_group, groups_list)
+            
+            # Flatten results
+            for group_records in results:
+                single_stock_records.extend(group_records)
+        
+        print(f"[{sheet_name}] Parallel processing complete: {len(single_stock_records)} records created")
+        
+        # Store in SINGLE_STOCK with BATCH upsert (1000 records per batch)
         single_stock_coll = get_collection("SINGLE_STOCK")
         
         # Delete only records from this sheet_name
         single_stock_coll.delete_many({"sheet_name": "wersel_match"})
         
         if single_stock_records:
-            # BATCHED PERSISTENCE: 1000 records per batch for granular progress
-            record_chunk_size = 1000
+            # ✅ BATCH PROCESSING: 1000 records per batch
+            batch_size = 1000
             total_records = len(single_stock_records)
             
-            for i in range(0, total_records, record_chunk_size):
+            for i in range(0, total_records, batch_size):
+                # Check for disconnection before each batch
                 if request and await request.is_disconnected():
-                    print(f"Stopping Flow 1: Client disconnected before final DB save")
+                    print(f"Stopping Flow 1: Client disconnected before DB save")
                     return sheets_info
                 
-                chunk = single_stock_records[i:i + record_chunk_size]
-                if chunk:
-                    # use insert_many for maximum speed
-                    single_stock_coll.insert_many(chunk, ordered=False)
-                    print(f"[{sheet_name}] OK | Saved batch: {min(i + record_chunk_size, total_records)}/{total_records} master records.")
+                batch = single_stock_records[i:i + batch_size]
+                operations = []
+                for record in batch:
+                    operations.append(UpdateOne(
+                        {
+                            "merge_id": record["merge_id"],
+                            "sheet_name": record["sheet_name"]
+                        },
+                        {"$set": record},
+                        upsert=True
+                    ))
                 
-                await asyncio.sleep(0)
+                if operations:
+                    # ✅ ULTRA FAST: ordered=False allows parallel execution
+                    single_stock_coll.bulk_write(operations, ordered=False)
+                    print(f"[{sheet_name}] Saved batch: {min(i + batch_size, total_records)}/{total_records} records")
+                
+                await asyncio.sleep(0)  # Yield for disconnect checks
         
         sheets_info[sheet_name] = {
             "raw_count": len(df),
             "single_stock_count": len(single_stock_records)
         }
-        print(f"[{sheet_name}] SUCCESS | {len(single_stock_records)} master records created from {len(df)} raw rows.")
     
-    print(f"Flow 1 Processing Completed for all sheets.")
     return sheets_info
 
 
@@ -386,8 +413,7 @@ Rules:
 2. Remove marketing / promo / campaign words (PROMO, PRM, NP, FOC, NEW, OFFER, LIMITED, BEST VALUE, etc.).
 3. If a term is not in the table, try to find its English equivalent or keep it as is if it's a specific product name.
 4. Do NOT merge different flavours or sizes unless they are logically identical after standardization.
-5. PRESERVE THE WORDS "BRAND" AND "FLAVOUR" if they appear in the input description; they are required for comparison.
-6. Output STRICT JSON only.
+5. Output STRICT JSON only.
 
 """
     
@@ -470,36 +496,16 @@ def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
     """
     Extend merge metadata for grouped documents.
     """
-    # 1. ITEM Management
-    current_item = base.get("ITEM", "")
+    base["merge_items"] = list(dict.fromkeys(
+        base.get("merge_items", []) +
+        [d.get("ITEM") for d in group_docs if d.get("ITEM")]
+    ))
     
-    # 2. Raw Items Collection (from merge_items list of SINGLE_STOCK docs)
-    raw_source_items = []
-    for d in group_docs:
-        mi = d.get("merge_items")
-        if isinstance(mi, list):
-            raw_source_items.extend(mi)
-        elif mi:
-            raw_source_items.append(str(mi))
-        elif d.get("ITEM"):
-            raw_source_items.append(d.get("ITEM"))
-            
-    # Unique and Filter current_item to avoid redundancy
-    unique_raw = sorted(list(dict.fromkeys([str(x) for x in raw_source_items if x])))
-    if current_item in unique_raw: 
-        unique_raw.remove(current_item)
-    
-    # 3. Construct Piped String: Clean | Raw1 | Raw2
-    if current_item:
-        base["merge_items"] = " | ".join([current_item] + unique_raw)
-    else:
-        base["merge_items"] = " | ".join(unique_raw)
-
-    # 4. Other Metadata
     base["merged_upcs"] = list(dict.fromkeys(
         base.get("merged_upcs", []) +
-        [str(d.get("UPC")) for d in group_docs if d.get("UPC")]
+        [d.get("UPC") for d in group_docs if d.get("UPC")]
     ))
+
     
     base["merged_from_docs"] = base.get("merged_from_docs", 0) + len(group_docs)
     
@@ -508,36 +514,29 @@ def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
         prev_rule + " | " + merge_rule if prev_rule else merge_rule
     )
     
-    # Standardize merge_level as a list/string per user example
-    new_levels = []
     prev_level = base.get("merge_level")
     if prev_level:
-        if isinstance(prev_level, list): new_levels = prev_level
-        else: new_levels = [prev_level]
-    
-    if merge_level not in new_levels:
-        new_levels.append(merge_level)
-    
-    base["merge_level"] = new_levels
+        if isinstance(prev_level, list):
+            base["merge_level"] = prev_level + [merge_level]
+        else:
+            base["merge_level"] = [prev_level, merge_level]
+    else:
+        base["merge_level"] = merge_level
 
 
 def simple_clean_item(name):
     """Fallback cleaner for when AI fails. Extracts and sorts unique keywords."""
     if not name: return ""
     s = str(name).upper()
-    # Remove noise (Keep BRAND and FLAVOUR as per client requirement for comparison)
-    noise = ["FLV", "PRODUCT", "PACK", "ITEM", "X1", "POCKY", "GLICO", "OREO"]
-    # Standardize spaces
-    for word in noise:
+    # Remove noise
+    for word in ["BRAND", "FLAVOUR", "FLV", "PRODUCT", "PACK", "ITEM", "X1", "POCKY", "GLICO", "OREO"]:
         s = s.replace(word, " ")
-    
     # Take alphanumeric words only and sort them
     words = sorted(list(set(re.findall(r'[A-Z0-9]+', s))))
-    return " ".join(words).strip()
+    return "".join(words)
 
 
 async def process_llm_mastering_flow_2(sheet_name, request=None):
-
     """
     Flow 2: LLM-based mastering.
     Reads from SINGLE_STOCK, creates MASTER_STOCK with LLM-extracted attributes.
@@ -559,15 +558,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     # 1. Discovery Phase: Extract unique items and fetch attributes in parallel
     print(f"Discovery Phase: Extracting unique attributes for {len(docs)} items...")
 
-    def get_doc_item(d):
-        # Prefer 'ITEM' if exists, else take first from 'merge_items' list
-        if d.get("ITEM"): return d.get("ITEM")
-        mi = d.get("merge_items")
-        if mi and isinstance(mi, list) and len(mi) > 0: return mi[0]
-        # Fallback to other descriptive fields
-        return d.get("BRAND", "") + " " + d.get("VARIANT", "")
-
-    unique_items = list(set([get_doc_item(d) for d in docs if get_doc_item(d)]))
+    unique_items = list(set([d.get("ITEM") for d in docs if d.get("ITEM")]))
     
     norm_map = {}
     
@@ -607,7 +598,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     # Pre-group by everything EXCEPT size to handle size tolerance per Brand+Flavour+Market combo
     pre_groups = {}
     for d in docs:
-        item = get_doc_item(d)
+        item = d.get("ITEM")
         brand = d.get("BRAND")
         if not item: continue
         
@@ -621,23 +612,23 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             
         market_val = get_val(d, ["MARKETS", "MARKET"])
         mpack_val = get_val(d, ["MPACK", "PACK"])
-        fact_val = get_val(d, ["FACTS", "FACT"])
+        facts_val = get_val(d, ["FACTS", "FACT"])
         
         if norm.get("confidence", 0) >= LLM_CONFIDENCE_THRESHOLD:
-            # HIGH CONFIDENCE: Group by AI-standardized attributes + Exact Fact
-            # (Keeping exact Fact name ensures we have 6 rows per product if there are 6 facts)
+            # HIGH CONFIDENCE: Group by AI-standardized attributes + Facts
             pre_group_key = (
                 f"{norm.get('brand')}|{norm.get('flavour')}|"
-                f"{market_val}|{mpack_val}|{fact_val}"
+                f"{market_val}|{mpack_val}|{facts_val}"
             )
         else:
-            # LOW CONFIDENCE: Fallback to Cleaned keywords + Exact Fact
+            # LOW CONFIDENCE: Fallback to Cleaned keywords + Facts
             clean_item = simple_clean_item(item)
             pre_group_key = (
                 f"LOW_CONF|{clean_item}|"
-                f"{market_val}|{mpack_val}|{fact_val}"
+                f"{market_val}|{mpack_val}|{facts_val}"
             )
-        
+
+            
         pre_groups.setdefault(pre_group_key, []).append(d)
 
 
@@ -647,8 +638,8 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     for pg_key, pg_docs in pre_groups.items():
         # Add numeric size for tolerance check
         for d in pg_docs:
-            # item is used to look up norm - use helper function
-            norm = norm_map.get(get_doc_item(d), {})
+            # item is used to look up norm
+            norm = norm_map.get(d.get("ITEM"), {})
             d["_size_val"] = extract_size_val(norm.get("size", ""))
             
         # Sort by size
@@ -671,15 +662,10 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             final_groups_list.append(current_bucket)
 
     print(f"Clusters formed after size tolerance: {len(final_groups_list)}")
-    print(f"Final Phase: Saving master stock clusters to database...")
 
-    # Process Groups
-    cluster_count = 0
-    for group_docs in final_groups_list:
-        cluster_count += 1
-        if cluster_count % 100 == 0:
-             print(f"Flow 2: Cluster processing progress: {cluster_count}/{len(final_groups_list)}")
-
+    
+    # ✅ BATCH PROCESSING: Prepare batch operations
+    batch_operations = []
     
     # Process Groups
     for group_docs in final_groups_list:
@@ -704,8 +690,8 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             doc.pop("_id", None)
             doc.pop("_norm", None)
             
-            # Get norm from the first item using helper function
-            item_name = get_doc_item(group_docs[0])
+            # Get norm from the first item
+            item_name = group_docs[0].get("ITEM")
             norm = norm_map.get(item_name, {})
             
             doc["brand"] = norm.get("brand")
@@ -731,13 +717,12 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 if k.startswith("_") or k.lower().startswith("unnamed"):
                     doc.pop(k)
             
-            # Upsert instead of insert
-            tgt_col.update_one(
+            # Add to batch operations
+            batch_operations.append(UpdateOne(
                 {"merge_id": doc["merge_id"], "sheet_name": doc["sheet_name"]},
                 {"$set": doc},
                 upsert=True
-            )
-            print(f"UPSERT AS-IS | {doc['ITEM']}")
+            ))
             continue
 
         
@@ -764,16 +749,18 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         
         base["merge_id"] = base.get("merge_id") or f"{base['BRAND']}_{uuid.uuid4().hex}"
         
-        # Get norm from first item using helper function
-        item_name = get_doc_item(group_docs[0])
+        # Get norm from first item
+        item_name = group_docs[0].get("ITEM")
         norm = norm_map.get(item_name, {})
         
         base["brand"] = norm.get("brand") or base.get("BRAND", "")
         base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
         base["size"] = norm.get("size") or base.get("NRMSIZE", "")
         base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")
-        base["llm_confidence_min"] = min([norm_map.get(get_doc_item(d), {}).get("confidence", 0) for d in group_docs])
+        base["llm_confidence_min"] = min(norm_map.get(d.get("ITEM"), {}).get("confidence", 0) for d in group_docs)
 
+
+        
         extend_merge_metadata(
             base=base,
             group_docs=group_docs,
@@ -790,32 +777,30 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             if k.startswith("_") or k.lower().startswith("unnamed"):
                 base.pop(k)
         
-        # Prepare operational batching
-        if not hasattr(process_llm_mastering_flow_2, "_batch_ops"):
-            process_llm_mastering_flow_2._batch_ops = []
+        # Add to batch operations
+        batch_operations.append(UpdateOne(
+            {"merge_id": base["merge_id"], "sheet_name": base["sheet_name"]},
+            {"$set": base},
+            upsert=True
+        ))
+    
+    # ✅ BATCH WRITE: Write in batches of 1000
+    if batch_operations:
+        batch_size = 1000
+        total_ops = len(batch_operations)
         
-        process_llm_mastering_flow_2._batch_ops.append(
-            UpdateOne(
-                {"merge_id": base["merge_id"], "sheet_name": base["sheet_name"]},
-                {"$set": base},
-                upsert=True
-            )
-        )
-        
-        # Write in batches of 100 during grouping (Flow 2 is slower due to AI counts anyway)
-        if len(process_llm_mastering_flow_2._batch_ops) >= 100:
-            tgt_col.bulk_write(process_llm_mastering_flow_2._batch_ops)
-            process_llm_mastering_flow_2._batch_ops = []
-            await asyncio.sleep(0) # Yield for disconnect checks
+        for i in range(0, total_ops, batch_size):
+            # Check for disconnection before each batch
+            if request and await request.is_disconnected():
+                print(f"Stopping Flow 2: Client disconnected before final DB save")
+                return {"status": "Stopped | Client disconnected"}
             
-        print(f"PROCESSED CLUSTER | {base['BRAND']} | items={len(base['merge_items'])}")
-    
-    # Final flush for Flow 2
-    if hasattr(process_llm_mastering_flow_2, "_batch_ops") and process_llm_mastering_flow_2._batch_ops:
-        tgt_col.bulk_write(process_llm_mastering_flow_2._batch_ops)
-        process_llm_mastering_flow_2._batch_ops = []
-    
-    print(f"Flow 2 AI Mastering Completed: {len(final_groups_list)} master clusters saved.")
+            batch = batch_operations[i:i + batch_size]
+            # ✅ ULTRA FAST: ordered=False allows parallel execution
+            tgt_col.bulk_write(batch, ordered=False)
+            print(f"Flow 2: Saved batch: {min(i + batch_size, total_ops)}/{total_ops} master records")
+            
+            await asyncio.sleep(0)  # Yield for disconnect checks
 
     
     return {
@@ -823,4 +808,3 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         "clusters_created": len(final_groups_list),
         "status": "Success | All items processed and merged according to client rules."
     }
-
