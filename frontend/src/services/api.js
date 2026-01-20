@@ -8,7 +8,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 900000, // 15 minutes (900,000ms) for large file uploads
+    timeout: 3600000, // 1 hour (3,600,000ms) for extreme cases
 });
 
 // Request interceptor to add session token
@@ -64,7 +64,7 @@ export const uploadAPI = {
         formData.append('file', file);
         return api.post('/upload/excel', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
-            timeout: 900000, // 15 minutes for large file uploads (up to 100MB)
+            timeout: 3600000, // Specific 1 hour timeout for uploads
             signal: signal, // Support for cancellation
         });
     },

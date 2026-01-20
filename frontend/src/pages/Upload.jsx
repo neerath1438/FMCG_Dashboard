@@ -72,7 +72,10 @@ const Upload = () => {
             {/* Upload Section */}
             <Card title="Upload Excel File" subtitle="Upload FMCG product data for processing">
                 {uploadStatus === 'idle' && (
-                    <UploadZone onUpload={handleUpload} />
+                    <UploadZone
+                        key={Date.now()}
+                        onUpload={handleUpload}
+                    />
                 )}
 
                 {uploadStatus === 'uploading' && (

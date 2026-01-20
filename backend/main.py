@@ -145,19 +145,20 @@ async def verify_auth(session_token: str = Header(None, alias="X-Session-Token")
 async def upload_excel(file: UploadFile = File(...), request: Request = None):
     """
     Flow 1: UPC-based merging with comprehensive validation
-    
-    Validates file type, size, format, columns, and data before processing
-    Returns detailed error messages and warnings to help users fix issues
     """
+    print(f"\n📥 Received upload request: {file.filename}")
     from backend.file_validator import validate_upload_file
     
     try:
         # Check if client is still connected before reading file
         if request and await request.is_disconnected():
+            print(f"❌ Aborting: Client disconnected before file read")
             raise HTTPException(status_code=499, detail="Client disconnected")
         
+        print(f"⏳ Reading file contents: {file.filename}...")
         # Read file contents
         contents = await file.read()
+        print(f"✅ File read complete. Size: {len(contents) / 1024 / 1024:.2f} MB")
         
         # Check again before validation (file read can take time)
         if request and await request.is_disconnected():
@@ -171,7 +172,7 @@ async def upload_excel(file: UploadFile = File(...), request: Request = None):
             raise HTTPException(status_code=499, detail="Client disconnected before processing")
         
         # Process file (validation passed)
-        results = process_excel_flow_1(io.BytesIO(contents))
+        results = await process_excel_flow_1(io.BytesIO(contents), request=request)
         
         # Return success with warnings if any
         response = {
@@ -218,12 +219,12 @@ async def upload_excel(file: UploadFile = File(...), request: Request = None):
         )
 
 @app.post("/process/llm-mastering/{sheet_name}")
-async def trigger_llm_mastering(sheet_name: str):
+async def trigger_llm_mastering(sheet_name: str, request: Request = None):
     """Flow 2: LLM-based mastering with marketing keyword removal"""
     from backend.processor import process_llm_mastering_flow_2
     
     try:
-        results = process_llm_mastering_flow_2(sheet_name)
+        results = await process_llm_mastering_flow_2(sheet_name, request=request)
         return {
             "status": "success",
             "sheet_name": sheet_name,
@@ -504,6 +505,7 @@ if __name__ == "__main__":
         uvicorn.run(
             app, 
             host="0.0.0.0", 
-            port=8000
+            port=8000,
+            timeout_keep_alive=3600
         )
 
