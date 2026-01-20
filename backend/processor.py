@@ -211,87 +211,81 @@ async def process_excel_flow_1(file_contents, request=None):
         # Add counts
         df_merged["merged_from_docs"] = df.groupby("_cluster_id").size()
 
-        # 4. Final Record Construction
-        print(f"[{sheet_name}] Constructing final master records...")
-        single_stock_records = []
+        # 4. Final Record Construction (Ultra-Fast Vectorized)
+        print(f"[{sheet_name}] Constructing final master records (Vectorized)...")
         
-        # Pre-calculate metadata parts
+        # Pre-calculate metadata base
         merge_rule_base = "UPC"
         if market_col: merge_rule_base += " + Market"
         if mpack_col: merge_rule_base += " + MPack"
         if facts_col: merge_rule_base += " + Facts"
         
-        # Iterate over the aggregated result (much smaller than raw df)
-        for _, row in df_merged.iterrows():
-            if request and await request.is_disconnected():
-                print(f"Stopping Flow 1: Client disconnected during final construction")
-                return sheets_info
-
-            merged_record = {"UPC": row[upc_col]}
-            
-            # Add Descriptive & Monthly data
-            for col in descriptive_cols: 
-                if col in row: merged_record[col] = row[col]
-            for col in monthly_cols: 
-                merged_record[col] = row[col]
-            
-            # Metadata
-            brand = str(merged_record.get("BRAND", "UNKNOWN"))
-            merged_record["merge_id"] = f"{brand}_{uuid.uuid4().hex}"
-            
-            merged_count = int(row["merged_from_docs"])
-            if item_col:
-                merged_record["merge_items"] = row[item_col]
-            else:
-                merged_record["merge_items"] = [f"UPC_{row[upc_col]}"] * merged_count
-            
-            merged_record["merged_from_docs"] = merged_count
-            
-            rule = merge_rule_base
-            if size_col and merged_count > 1: rule += " + Size(5g)"
-            merged_record["merge_rule"] = rule
-            
-            merged_record["merged_upcs"] = [str(row[upc_col])]
-            merged_record["merge_level"] = "NO_MERGE" if merged_count == 1 else f"MERGED_{merged_count}_VARIANTS"
-            merged_record["sheet_name"] = "wersel_match"
-            
-            single_stock_records.append(merged_record)
+        # Convert the entire aggregated DF to records list at once (Lightning Fast)
+        master_records_raw = df_merged.reset_index().to_dict('records')
+        single_stock_records = []
         
-        # Store in SINGLE_STOCK with upsert logic
+        # Now we just need to add the Unique/calculated fields
+        # Processing in construction chunks to keep is_disconnected check reactive
+        const_chunk_size = 1000
+        for i in range(0, len(master_records_raw), const_chunk_size):
+            if request and await request.is_disconnected():
+                print(f"Stopping Flow 1: Client disconnected during record construction")
+                return sheets_info
+            
+            chunk = master_records_raw[i:i + const_chunk_size]
+            for row in chunk:
+                brand = str(row.get("BRAND", "UNKNOWN"))
+                merged_count = int(row["merged_from_docs"])
+                
+                # Metadata Injection
+                row["merge_id"] = f"{brand}_{uuid.uuid4().hex}"
+                row["merged_from_docs"] = merged_count
+                row["merge_rule"] = merge_rule_base + (" + Size(5g)" if size_col and merged_count > 1 else "")
+                row["merged_upcs"] = [str(row[upc_col])]
+                row["merge_level"] = "NO_MERGE" if merged_count == 1 else f"MERGED_{merged_count}_VARIANTS"
+                row["sheet_name"] = "wersel_match"
+                
+                # Create merge_items list AND preserve ITEM field for Flow 2
+                if item_col:
+                    items_list = row.get(item_col, [])
+                    # Ensure it's a list
+                    if not isinstance(items_list, list):
+                        items_list = [items_list]
+                    row["merge_items"] = items_list
+                    # Preserve ITEM field with first item name for Flow 2 AI processing
+                    row["ITEM"] = items_list[0] if items_list else f"UPC_{row[upc_col]}"
+                else:
+                    row["merge_items"] = [f"UPC_{row[upc_col]}"] * merged_count
+                    row["ITEM"] = f"UPC_{row[upc_col]}"
+                
+                # Cleanup internal agg fields
+                row.pop("_cluster_id", None)
+                row.pop("_size_val", None)
+                
+                single_stock_records.append(row)
+
+        # Store in SINGLE_STOCK with ultra-fast insert_many
         single_stock_coll = get_collection("SINGLE_STOCK")
         
         # Delete only records from this sheet_name
         single_stock_coll.delete_many({"sheet_name": "wersel_match"})
         
         if single_stock_records:
-            # BATCHED PROCESSING: Process in chunks of 10000 records
-            record_chunk_size = 10000
+            # BATCHED PERSISTENCE: 1000 records per batch for granular progress
+            record_chunk_size = 1000
             total_records = len(single_stock_records)
             
             for i in range(0, total_records, record_chunk_size):
-                # Final check for disconnection before each batch write
                 if request and await request.is_disconnected():
-                    print(f"Stopping Flow 1: Client disconnected before DB batch write")
+                    print(f"Stopping Flow 1: Client disconnected before final DB save")
                     return sheets_info
                 
                 chunk = single_stock_records[i:i + record_chunk_size]
-                operations = []
-                for record in chunk:
-                    operations.append(UpdateOne(
-                        {
-                            "merge_id": record["merge_id"],
-                            "sheet_name": record["sheet_name"]
-                        },
-                        {"$set": record},
-                        upsert=True
-                    ))
-                
-                if operations:
-                    # SPEED OPTIMIZATION: ordered=False allows MongoDB to process writes in parallel
-                    single_stock_coll.bulk_write(operations, ordered=False)
+                if chunk:
+                    # use insert_many for maximum speed
+                    single_stock_coll.insert_many(chunk, ordered=False)
                     print(f"[{sheet_name}] OK | Saved batch: {min(i + record_chunk_size, total_records)}/{total_records} master records.")
                 
-                # Yield to event loop to handle other requests/disconnect checks
                 await asyncio.sleep(0)
         
         sheets_info[sheet_name] = {
@@ -392,7 +386,8 @@ Rules:
 2. Remove marketing / promo / campaign words (PROMO, PRM, NP, FOC, NEW, OFFER, LIMITED, BEST VALUE, etc.).
 3. If a term is not in the table, try to find its English equivalent or keep it as is if it's a specific product name.
 4. Do NOT merge different flavours or sizes unless they are logically identical after standardization.
-5. Output STRICT JSON only.
+5. PRESERVE THE WORDS "BRAND" AND "FLAVOUR" if they appear in the input description; they are required for comparison.
+6. Output STRICT JSON only.
 
 """
     
@@ -475,16 +470,36 @@ def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
     """
     Extend merge metadata for grouped documents.
     """
-    base["merge_items"] = list(dict.fromkeys(
-        base.get("merge_items", []) +
-        [d.get("ITEM") for d in group_docs if d.get("ITEM")]
-    ))
+    # 1. ITEM Management
+    current_item = base.get("ITEM", "")
     
+    # 2. Raw Items Collection (from merge_items list of SINGLE_STOCK docs)
+    raw_source_items = []
+    for d in group_docs:
+        mi = d.get("merge_items")
+        if isinstance(mi, list):
+            raw_source_items.extend(mi)
+        elif mi:
+            raw_source_items.append(str(mi))
+        elif d.get("ITEM"):
+            raw_source_items.append(d.get("ITEM"))
+            
+    # Unique and Filter current_item to avoid redundancy
+    unique_raw = sorted(list(dict.fromkeys([str(x) for x in raw_source_items if x])))
+    if current_item in unique_raw: 
+        unique_raw.remove(current_item)
+    
+    # 3. Construct Piped String: Clean | Raw1 | Raw2
+    if current_item:
+        base["merge_items"] = " | ".join([current_item] + unique_raw)
+    else:
+        base["merge_items"] = " | ".join(unique_raw)
+
+    # 4. Other Metadata
     base["merged_upcs"] = list(dict.fromkeys(
         base.get("merged_upcs", []) +
-        [d.get("UPC") for d in group_docs if d.get("UPC")]
+        [str(d.get("UPC")) for d in group_docs if d.get("UPC")]
     ))
-
     
     base["merged_from_docs"] = base.get("merged_from_docs", 0) + len(group_docs)
     
@@ -493,26 +508,32 @@ def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
         prev_rule + " | " + merge_rule if prev_rule else merge_rule
     )
     
+    # Standardize merge_level as a list/string per user example
+    new_levels = []
     prev_level = base.get("merge_level")
     if prev_level:
-        if isinstance(prev_level, list):
-            base["merge_level"] = prev_level + [merge_level]
-        else:
-            base["merge_level"] = [prev_level, merge_level]
-    else:
-        base["merge_level"] = merge_level
+        if isinstance(prev_level, list): new_levels = prev_level
+        else: new_levels = [prev_level]
+    
+    if merge_level not in new_levels:
+        new_levels.append(merge_level)
+    
+    base["merge_level"] = new_levels
 
 
 def simple_clean_item(name):
     """Fallback cleaner for when AI fails. Extracts and sorts unique keywords."""
     if not name: return ""
     s = str(name).upper()
-    # Remove noise
-    for word in ["BRAND", "FLAVOUR", "FLV", "PRODUCT", "PACK", "ITEM", "X1", "POCKY", "GLICO", "OREO"]:
+    # Remove noise (Keep BRAND and FLAVOUR as per client requirement for comparison)
+    noise = ["FLV", "PRODUCT", "PACK", "ITEM", "X1", "POCKY", "GLICO", "OREO"]
+    # Standardize spaces
+    for word in noise:
         s = s.replace(word, " ")
+    
     # Take alphanumeric words only and sort them
     words = sorted(list(set(re.findall(r'[A-Z0-9]+', s))))
-    return "".join(words)
+    return " ".join(words).strip()
 
 
 async def process_llm_mastering_flow_2(sheet_name, request=None):
@@ -538,7 +559,15 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     # 1. Discovery Phase: Extract unique items and fetch attributes in parallel
     print(f"Discovery Phase: Extracting unique attributes for {len(docs)} items...")
 
-    unique_items = list(set([d.get("ITEM") for d in docs if d.get("ITEM")]))
+    def get_doc_item(d):
+        # Prefer 'ITEM' if exists, else take first from 'merge_items' list
+        if d.get("ITEM"): return d.get("ITEM")
+        mi = d.get("merge_items")
+        if mi and isinstance(mi, list) and len(mi) > 0: return mi[0]
+        # Fallback to other descriptive fields
+        return d.get("BRAND", "") + " " + d.get("VARIANT", "")
+
+    unique_items = list(set([get_doc_item(d) for d in docs if get_doc_item(d)]))
     
     norm_map = {}
     
@@ -578,7 +607,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     # Pre-group by everything EXCEPT size to handle size tolerance per Brand+Flavour+Market combo
     pre_groups = {}
     for d in docs:
-        item = d.get("ITEM")
+        item = get_doc_item(d)
         brand = d.get("BRAND")
         if not item: continue
         
@@ -592,24 +621,23 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             
         market_val = get_val(d, ["MARKETS", "MARKET"])
         mpack_val = get_val(d, ["MPACK", "PACK"])
-        facts_val = get_val(d, ["FACTS", "FACT"])
+        fact_val = get_val(d, ["FACTS", "FACT"])
         
         if norm.get("confidence", 0) >= LLM_CONFIDENCE_THRESHOLD:
-            # HIGH CONFIDENCE: Group by AI-standardized attributes + Facts
+            # HIGH CONFIDENCE: Group by AI-standardized attributes + Exact Fact
+            # (Keeping exact Fact name ensures we have 6 rows per product if there are 6 facts)
             pre_group_key = (
                 f"{norm.get('brand')}|{norm.get('flavour')}|"
-                f"{market_val}|{mpack_val}|{facts_val}"
+                f"{market_val}|{mpack_val}|{fact_val}"
             )
         else:
-            # LOW CONFIDENCE: Fallback to Cleaned keywords + Facts
+            # LOW CONFIDENCE: Fallback to Cleaned keywords + Exact Fact
             clean_item = simple_clean_item(item)
             pre_group_key = (
                 f"LOW_CONF|{clean_item}|"
-                f"{market_val}|{mpack_val}|{facts_val}"
+                f"{market_val}|{mpack_val}|{fact_val}"
             )
-
-
-            
+        
         pre_groups.setdefault(pre_group_key, []).append(d)
 
 
@@ -619,8 +647,8 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     for pg_key, pg_docs in pre_groups.items():
         # Add numeric size for tolerance check
         for d in pg_docs:
-            # item is used to look up norm
-            norm = norm_map.get(d.get("ITEM"), {})
+            # item is used to look up norm - use helper function
+            norm = norm_map.get(get_doc_item(d), {})
             d["_size_val"] = extract_size_val(norm.get("size", ""))
             
         # Sort by size
@@ -676,8 +704,8 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             doc.pop("_id", None)
             doc.pop("_norm", None)
             
-            # Get norm from the first item
-            item_name = group_docs[0].get("ITEM")
+            # Get norm from the first item using helper function
+            item_name = get_doc_item(group_docs[0])
             norm = norm_map.get(item_name, {})
             
             doc["brand"] = norm.get("brand")
@@ -736,18 +764,16 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         
         base["merge_id"] = base.get("merge_id") or f"{base['BRAND']}_{uuid.uuid4().hex}"
         
-        # Get norm from first item
-        item_name = group_docs[0].get("ITEM")
+        # Get norm from first item using helper function
+        item_name = get_doc_item(group_docs[0])
         norm = norm_map.get(item_name, {})
         
         base["brand"] = norm.get("brand") or base.get("BRAND", "")
         base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
         base["size"] = norm.get("size") or base.get("NRMSIZE", "")
         base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")
-        base["llm_confidence_min"] = min(norm_map.get(d.get("ITEM"), {}).get("confidence", 0) for d in group_docs)
+        base["llm_confidence_min"] = min([norm_map.get(get_doc_item(d), {}).get("confidence", 0) for d in group_docs])
 
-
-        
         extend_merge_metadata(
             base=base,
             group_docs=group_docs,
