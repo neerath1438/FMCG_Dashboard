@@ -289,7 +289,7 @@ async def process_excel_flow_1(file_contents, request=None):
                     single_stock_records.extend(group_records)
                 
                 # Progress update
-                print(f"[{sheet_name}] Processed {batch_end}/{total_groups} groups ({len(single_stock_records)} records created)")
+                # print(f"[{sheet_name}] Processed {batch_end}/{total_groups} groups ({len(single_stock_records)} records created)")
                 
                 await asyncio.sleep(0)  # Yield for disconnect checks
         
@@ -335,7 +335,7 @@ async def process_excel_flow_1(file_contents, request=None):
                 for i in range(0, len(single_stock_records), batch_size):
                     batch = single_stock_records[i:i + batch_size]
                     single_stock_coll.insert_many(batch)
-                    print(f"[{sheet_name}] MongoDB: Saved {min(i + batch_size, len(single_stock_records))}/{len(single_stock_records)}")
+                    # print(f"[{sheet_name}] MongoDB: Saved {min(i + batch_size, len(single_stock_records))}/{len(single_stock_records)}")
         
         sheets_info[sheet_name] = {
             "raw_count": len(df),
@@ -566,20 +566,11 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     # Clear previous master data for this sheet only
     tgt_col.delete_many({"sheet_name": "wersel_match"})
     
-    # ✅ ULTRA FAST: Read from Parquet file instead of MongoDB
-    parquet_path = f"data/SINGLE_STOCK_{sheet_name}.parquet"
-    
-    if os.path.exists(parquet_path):
-        print(f"Loading data from Parquet file: {parquet_path}")
-        df_single_stock = pd.read_parquet(parquet_path)
-        docs = df_single_stock.to_dict('records')
-        print(f"Loaded {len(docs)} docs from Parquet file (ultra-fast!)")
-    else:
-        # Fallback to MongoDB if Parquet doesn't exist
-        print(f"Parquet file not found, falling back to MongoDB...")
-        src_col = get_collection("SINGLE_STOCK")
-        docs = list(src_col.find({"sheet_name": "wersel_match"}))
-        print(f"Loaded {len(docs)} docs from MongoDB")
+    # ✅ Read from MongoDB (reliable)
+    print(f"Loading data from MongoDB for sheet: {sheet_name}...")
+    src_col = get_collection("SINGLE_STOCK")
+    docs = list(src_col.find({"sheet_name": "wersel_match"}))
+    print(f"Loaded {len(docs)} docs from MongoDB")
 
     
     groups = {}
