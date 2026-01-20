@@ -28,10 +28,11 @@ const Upload = () => {
             const result = await uploadAPI.uploadExcel(file, controller.signal);
 
             setUploadStatus('success');
-            setUploadResult(result.data);
+            // 'result' is the response body due to axios interceptor
+            setUploadResult(result);
 
-            // ✅ Automatically trigger Flow 2 (AI Mastering) after upload success
-            const sheetName = result.data.sheets_processed?.[0];
+            // ✅ Fix: sheets_processed is a top-level property of the body
+            const sheetName = result.sheets_processed?.[0];
             if (sheetName) {
                 console.log(`Auto-triggering Flow 2 for sheet: ${sheetName}`);
                 await handleTriggerLLM(sheetName);
