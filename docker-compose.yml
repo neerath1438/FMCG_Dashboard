@@ -38,9 +38,9 @@ services:
       - CORS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS
       - CORS_ALLOW_HEADERS=Content-Type,Authorization,X-Requested-With
       - CORS_ALLOW_CREDENTIALS=true
-    # Optimized for 100MB file uploads with extended timeouts
+    # Optimized for 100MB file uploads with extended timeouts and high concurrency
     command: >
-      uvicorn backend.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 3600 --limit-concurrency 100
+      uvicorn backend.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 3600 --limit-concurrency 500 --workers 2
     depends_on:
       - mongodb
     volumes:
