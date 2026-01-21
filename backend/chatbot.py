@@ -6,7 +6,7 @@ from backend.database import get_collection
 
 from datetime import datetime
 from backend.database import get_collection, MASTER_STOCK_COL
-from backend.llm_client import llm_client
+from backend.llm_client import llm_client, flow2_client
 
 # Path for Domain Knowledge
 DOMAIN_KNOWLEDGE_PATH = os.path.join(os.path.dirname(__file__), "CHATBOT_DOMAIN_KNOWLEDGE.txt")
@@ -66,32 +66,69 @@ def process_chatbot_query(question, session_id="default"):
     query_limit = 100 if is_analysis_request else 20
 
     learning_context = get_learning_context()
+    
+    # -------------------------------------------------------------------------
+    # STAGE 1: OPENAI MASTER NODE GENERATION (Structured Parsing)
+    # -------------------------------------------------------------------------
+    master_node_prompt = f"""You are a master data parser. Convert the user's question into a Structured Master Node JSON.
+### SCHEMA:
+- BRAND: Standardized brand name
+- ITEM: Product keywords
+- MARKET: Target market (e.g., 'Pen Malaysia')
+- FACTS: Reporting metric (e.g., 'Sales Value', 'Sales Units', 'Weighted Distribution')
+- SORT: -1 for descending, 1 for ascending
+- LIMIT: Number of records
+
+### RULES:
+1. "Malaysia" -> "Pen Malaysia"
+2. "Sales" -> "Sales Value"
+3. "Reach" or "Distribution" -> "Weighted Distribution"
+4. Output STRICT JSON only.
+
+### Example:
+Question: "Show Pocky details in Malaysia for reach"
+Output: {{"BRAND": "GLICO", "ITEM": "POCKY", "MARKET": "Pen Malaysia", "FACTS": "Weighted Distribution", "SORT": -1, "LIMIT": 20}}
+"""
+    try:
+        master_node_raw = llm_client.chat_completion(
+            system_prompt=master_node_prompt,
+            user_message=question,
+            temperature=0
+        )
+        master_node_json = json.loads(master_node_raw.strip())
+    except:
+        master_node_json = {"question": question, "ITEM": question_lower} # Fallback
+
+    # -------------------------------------------------------------------------
+    # STAGE 2: CLAUDE QUERY GENERATION (Using Master Node JSON)
+    # -------------------------------------------------------------------------
     system_prompt = f"""You are an AI assistant for an FMCG Product Mastering Platform in Malaysia.
 Database: {total_count} products (MongoDB).
 
 {learning_context}
 
+### MASTER NODE INPUT:
+{json.dumps(master_node_json, indent=2)}
+
 ### SCHEMA (CASE SENSITIVE):
 - `BRAND`: (e.g., 'OREO', 'GLICO', 'RITZ')
 - `Markets`: (e.g., 'Pen Malaysia', 'EM', 'Total 7-Eleven')
-- `Facts`: (e.g., 'Sales Value', 'Sales Units')
+- `Facts`: (e.g., 'Sales Value', 'Sales Units', 'Weighted Distribution - Reach - Product Segment')
 - `ITEM`: Product descriptions.
 - `MAT Nov'24`: Numeric value for sorting (Sales).
 - `merged_from_docs`: Number of items combined into this master record.
 - `merge_items`: Array of original product names.
-- `sheet_name`: The source file name (e.g., 'Nielsen_Wersel_Test').
+- `sheet_name`: The source file name (e.g., 'wersel_match').
 
 ### RULES:
-1. **QUERY**: Return a MongoDB query. ALWAYS use the exact field names above.
-2. **MARKET MAPPING**: "Malaysia" usually refers to `{"Markets": "Pen Malaysia"}`.
+1. **QUERY**: Generate a MongoDB query based on the MASTER NODE INPUT.
+2. **REGEX SEARCH**: For `Facts` and `ITEM`, ALWAYS use `$regex` with `options: "i"`.
+   Example: {{"Facts": {{"$regex": "Weighted Distribution", "$options": "i"}}}}
 3. **TECHNICAL INPUT**: If the user provides a piece of Code or MongoDB query fragment, incorporate that logic into the generated query.
 4. **PRIORITY**: If asked about "merging" or "what items are combined", search inside the "merge_items" array.
-5. **SALES**: For "top", "best", "total sales" queries, ALWAYS use {{"Facts": "Sales Value"}} and sort by "MAT Nov'24": -1.
-6. **MERGED COUNT**: For "top merged", "highest consolidation", or "most items combined" queries, sort by "merged_from_docs": -1.
-7. **TABULAR DATA**: If the user asks for a "table", "summary", or "sales breakdown", the **Answer Generation** (Step C) MUST use professional Markdown table format.
-   Example: | Market | Brand | Merged Count | Item |
-8. **NO EMPTY ANSWERS**: If a specific brand is not found, try searching for keywords in the ITEM field using regex.
-9. **OUTPUT**: ALWAYS return ONLY a VALID JSON object.
+5. **SALES**: For "top", "best", "total sales", sort by "MAT Nov'24": -1.
+6. **MERGED COUNT**: For "top merged", sort by "merged_from_docs": -1.
+7. **OUTPUT**: ALWAYS return ONLY a VALID JSON object.
    Expected Structure: {{ "query": {{...}}, "sort": [[...]], "limit": {query_limit}, "explanation": "..." }}
 """
 
