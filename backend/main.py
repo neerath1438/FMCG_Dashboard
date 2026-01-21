@@ -498,7 +498,8 @@ if __name__ == "__main__":
             host="0.0.0.0", 
             port=8000,
             ssl_keyfile=ssl_keyfile,
-            ssl_certfile=ssl_certfile
+            ssl_certfile=ssl_certfile,
+            timeout_keep_alive=18000 # 5 hours for large file processing
         )
     else:
         # Local development without SSL
@@ -506,6 +507,5 @@ if __name__ == "__main__":
             app, 
             host="0.0.0.0", 
             port=8000,
-            timeout_keep_alive=3600
+            timeout_keep_alive=18000 # 5 hours for large file processing
         )
-

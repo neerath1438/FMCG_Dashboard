@@ -83,7 +83,7 @@ class LLMClient:
                         "max_tokens": max_tokens,
                         "temperature": temperature
                     }
-                    response = requests.post(self.azure_endpoint, headers=headers, json=payload, timeout=120)  # 2 minutes for LLM processing
+                    response = requests.post(self.azure_endpoint, headers=headers, json=payload, timeout=300)  # 5 minutes for LLM processing
                     
                     if response.status_code == 200:
                         res_json = response.json()

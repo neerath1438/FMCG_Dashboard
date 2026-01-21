@@ -807,17 +807,15 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         total_ops = len(batch_operations)
         
         for i in range(0, total_ops, batch_size):
-            # Check for disconnection before each batch
-            if request and await request.is_disconnected():
-                print(f"Stopping Flow 2: Client disconnected before final DB save")
-                return {"status": "Stopped | Client disconnected"}
+            # ✅ REMOVED disconnect check here - was causing premature stops
+            # Let the save complete even if frontend disconnects
             
             batch = batch_operations[i:i + batch_size]
             # ✅ ULTRA FAST: ordered=False allows parallel execution
             tgt_col.bulk_write(batch, ordered=False)
             print(f"Flow 2: Saved batch: {min(i + batch_size, total_ops)}/{total_ops} master records")
             
-            await asyncio.sleep(0)  # Yield for disconnect checks
+            await asyncio.sleep(0)  # Yield for event loop
 
     
     return {
