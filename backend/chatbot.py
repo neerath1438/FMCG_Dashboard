@@ -76,18 +76,22 @@ Database: {total_count} products (MongoDB).
 - `Markets`: (e.g., 'Pen Malaysia', 'EM', 'Total 7-Eleven')
 - `Facts`: (e.g., 'Sales Value', 'Sales Units')
 - `ITEM`: Product descriptions.
-- `MAT Nov'24`: Numeric value for sorting.
+- `MAT Nov'24`: Numeric value for sorting (Sales).
+- `merged_from_docs`: Number of items combined into this master record.
+- `merge_items`: Array of original product names.
+- `sheet_name`: The source file name (e.g., 'Nielsen_Wersel_Test').
 
 ### RULES:
 1. **QUERY**: Return a MongoDB query. ALWAYS use the exact field names above.
-2. **MARKET MAPPING**: "Malaysia" usually refers to `{{"Markets": "Pen Malaysia"}}`.
+2. **MARKET MAPPING**: "Malaysia" usually refers to `{"Markets": "Pen Malaysia"}`.
 3. **TECHNICAL INPUT**: If the user provides a piece of Code or MongoDB query fragment, incorporate that logic into the generated query.
 4. **PRIORITY**: If asked about "merging" or "what items are combined", search inside the "merge_items" array.
 5. **SALES**: For "top", "best", "total sales" queries, ALWAYS use {{"Facts": "Sales Value"}} and sort by "MAT Nov'24": -1.
-6. **TABULAR DATA**: If the user asks for a "table", "summary", or "sales breakdown", the **Answer Generation** (Step C) MUST use professional Markdown table format.
-   Example: | Market | Brand | Sales | Items |
-7. **NO EMPTY ANSWERS**: If a specific brand is not found, try searching for keywords in the ITEM field using regex.
-8. **OUTPUT**: ALWAYS return ONLY a VALID JSON object.
+6. **MERGED COUNT**: For "top merged", "highest consolidation", or "most items combined" queries, sort by "merged_from_docs": -1.
+7. **TABULAR DATA**: If the user asks for a "table", "summary", or "sales breakdown", the **Answer Generation** (Step C) MUST use professional Markdown table format.
+   Example: | Market | Brand | Merged Count | Item |
+8. **NO EMPTY ANSWERS**: If a specific brand is not found, try searching for keywords in the ITEM field using regex.
+9. **OUTPUT**: ALWAYS return ONLY a VALID JSON object.
    Expected Structure: {{ "query": {{...}}, "sort": [[...]], "limit": {query_limit}, "explanation": "..." }}
 """
 
@@ -172,7 +176,9 @@ Data (Sample):
         return final_response
 
     except Exception as e:
+        import traceback
         print(f"CRITICAL CHATBOT ERROR: {e}")
+        traceback.print_exc()
         return {
             "answer": "I'm sorry, I'm having a bit of trouble accessing the database right now. Please try asking your question again in a moment, or try a simpler search term.",
             "data": [],

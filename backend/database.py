@@ -35,6 +35,12 @@ def create_indexes():
                                    background=True)
         print("✅ Created index: MASTER_STOCK (merge_id + sheet_name)")
         
+        # MASTER_STOCK: Index on merged_from_docs for "top merged" queries
+        master_stock.create_index([("merged_from_docs", ASCENDING)], 
+                                   name="merged_from_docs_idx",
+                                   background=True)
+        print("✅ Created index: MASTER_STOCK (merged_from_docs)")
+        
         # SINGLE_STOCK: Index on sheet_name for faster queries
         single_stock = db["SINGLE_STOCK"]
         single_stock.create_index([("sheet_name", ASCENDING)], 
