@@ -11,7 +11,7 @@ import asyncio
 from openai import OpenAI
 import httpx
 from backend.database import get_collection
-from backend.llm_client import llm_client
+from backend.llm_client import llm_client, flow2_client  # Import both clients
 from concurrent.futures import ThreadPoolExecutor
 from pymongo import UpdateOne
 
@@ -294,48 +294,37 @@ async def process_excel_flow_1(file_contents, request=None):
                 await asyncio.sleep(0)  # Yield for disconnect checks
         
         print(f"[{sheet_name}] Parallel processing complete: {len(single_stock_records)} total records")
-        # ✅ ULTRA FAST: Save to Parquet instead of MongoDB (10-15x faster!)
-        # MongoDB insert: 40 mins → Parquet write: 2-3 mins
         
+        # ✅ OPTIMIZED: Direct MongoDB batch insert with parallel execution
         if single_stock_records:
-            try:
-                # Create data directory if it doesn't exist
-                os.makedirs("data", exist_ok=True)
+            single_stock_coll = get_collection("SINGLE_STOCK")
+            single_stock_coll.delete_many({"sheet_name": "wersel_match"})
+            
+            # Batch insert with ordered=False for parallel execution (much faster)
+            batch_size = 5000  # Larger batches for better performance
+            total_records = len(single_stock_records)
+            
+            print(f"[{sheet_name}] Saving {total_records} records to MongoDB...")
+            
+            for i in range(0, total_records, batch_size):
+                batch = single_stock_records[i:i + batch_size]
+                try:
+                    # ordered=False allows MongoDB to insert in parallel
+                    single_stock_coll.insert_many(batch, ordered=False)
+                except Exception as e:
+                    print(f"[{sheet_name}] Batch insert error: {e}")
+                    # Retry with smaller batch if needed
+                    for record in batch:
+                        try:
+                            single_stock_coll.insert_one(record)
+                        except:
+                            pass
                 
-                # Convert to DataFrame for Parquet
-                df_single_stock = pd.DataFrame(single_stock_records)
-                
-                # Save to Parquet file (compressed, ultra-fast)
-                parquet_path = f"data/SINGLE_STOCK_{sheet_name}.parquet"
-                df_single_stock.to_parquet(parquet_path, compression='snappy', index=False)
-                
-                print(f"[{sheet_name}] ✅ Saved {len(single_stock_records)} records to Parquet file (ultra-fast!)")
-                print(f"[{sheet_name}] File: {parquet_path}")
-                
-                # Also save a small sample to MongoDB for dashboard preview
-                single_stock_coll = get_collection("SINGLE_STOCK")
-                single_stock_coll.delete_many({"sheet_name": "wersel_match"})
-                
-                # Save first 100 records to MongoDB for preview
-                preview_records = single_stock_records[:100]
-                if preview_records:
-                    single_stock_coll.insert_many(preview_records)
-                    print(f"[{sheet_name}] Saved {len(preview_records)} preview records to MongoDB")
-                    
-            except Exception as e:
-                # Fallback to MongoDB if Parquet fails
-                print(f"[{sheet_name}] ⚠️ Parquet save failed: {str(e)}")
-                print(f"[{sheet_name}] Falling back to MongoDB (slower but reliable)...")
-                
-                single_stock_coll = get_collection("SINGLE_STOCK")
-                single_stock_coll.delete_many({"sheet_name": "wersel_match"})
-                
-                # Save all records to MongoDB in batches
-                batch_size = 1000
-                for i in range(0, len(single_stock_records), batch_size):
-                    batch = single_stock_records[i:i + batch_size]
-                    single_stock_coll.insert_many(batch)
-                    # print(f"[{sheet_name}] MongoDB: Saved {min(i + batch_size, len(single_stock_records))}/{len(single_stock_records)}")
+                progress = min(i + batch_size, total_records)
+                if progress % 10000 == 0 or progress == total_records:
+                    print(f"[{sheet_name}] MongoDB: Saved {progress}/{total_records} ({(progress/total_records*100):.1f}%)")
+            
+            print(f"[{sheet_name}] ✅ Saved {total_records} records to MongoDB")
         
         sheets_info[sheet_name] = {
             "raw_count": len(df),
@@ -452,7 +441,8 @@ Return JSON only:
 """
     
     try:
-        raw_content = llm_client.chat_completion(
+        # ✅ Use OpenAI-only client for Flow 2 (faster, no rate limits)
+        raw_content = flow2_client.chat_completion(
             system_prompt=system_prompt,
             user_message=user_prompt,
             temperature=0
@@ -465,15 +455,17 @@ Return JSON only:
             print(f"Empty LLM response for '{item}' - using fallback")
             raise ValueError("Empty response from LLM")
         
-        # Clean markdown code blocks if present
-        if raw_content.startswith("```"):
-            # Find first opening brace
-            start_idx = raw_content.find("{")
-            end_idx = raw_content.rfind("}")
-            if start_idx != -1 and end_idx != -1:
-                raw_content = raw_content[start_idx:end_idx+1]
+        # ✅ FIX: Extract only the JSON object, ignore extra text
+        # Find the first { and last } to extract just the JSON
+        start_idx = raw_content.find("{")
+        end_idx = raw_content.rfind("}")
         
-        data = json.loads(raw_content)
+        if start_idx != -1 and end_idx != -1:
+            json_str = raw_content[start_idx:end_idx+1]
+        else:
+            json_str = raw_content
+        
+        data = json.loads(json_str)
         
         # Validate required fields
         if not data.get("brand") and not data.get("flavour"):
@@ -599,8 +591,8 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         print(f"Error pre-loading cache: {e}")
 
     for batch_num in range(total_batches):
-        # Check for disconnection before starting a new batch of LLM calls
-        if request and await request.is_disconnected():
+        # Check for disconnection every 10 batches (not every batch to avoid false positives)
+        if batch_num % 10 == 0 and request and await request.is_disconnected():
             print(f"Stopping Flow 2: Client disconnected before batch {batch_num + 1}")
             return {"status": "Stopped | Client disconnected"}
 
@@ -610,14 +602,16 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         
         print(f"Batch {batch_num + 1}/{total_batches}: Processing {len(batch_items)} items...")
         
-        with ThreadPoolExecutor(max_workers=50) as executor:  # Increased for ultra-fast processing
+        # ✅ OpenAI-ONLY: Can use more workers since no Claude rate limits
+        # OpenAI has much higher limits, so we can process faster
+        with ThreadPoolExecutor(max_workers=50) as executor:  # Back to 50 for OpenAI
             results = list(executor.map(normalize_item_llm, batch_items))
             for item, res in zip(batch_items, results):
                 norm_map[item] = res
         
-        # Wait between batches minimized - relying on parallel execution
+        # Minimal wait between batches for OpenAI
         if batch_num < total_batches - 1:
-            await asyncio.sleep(0.1) # Brief yield to keep server responsive
+            await asyncio.sleep(0.5)  # Reduced from 6s to 0.5s for OpenAI
 
             
     # 2. Grouping Phase: Consistently group docs based on extracted attributes + Strict Keys
@@ -698,11 +692,6 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     
     # Process Groups
     for group_docs in final_groups_list:
-        # Check for disconnection during final cluster processing
-        if request and await request.is_disconnected():
-            print(f"Stopping Flow 2: Client disconnected during final cluster processing")
-            return {"status": "Stopped | Client disconnected"}
-
         # Sort group docs by 'Facts' priority: prefer 'Sales Value' as the descriptive base
         def facts_priority(doc):
             f = str(doc.get("Facts", doc.get("FACTS", ""))).upper()

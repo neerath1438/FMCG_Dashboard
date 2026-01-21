@@ -91,26 +91,14 @@ class LLMClient:
                         return res_json['content'][0]['text']
                     
                     elif response.status_code == 429:
-                        # Rate limit hit - parse wait time and retry
-                        error_text = response.text
-                        print(f"Azure Claude Rate Limit (429) - Attempt {attempt + 1}/{max_retries}")
-                        
-                        # Try to get wait time from error message
-                        wait_time = self._parse_retry_after(error_text)
-                        if wait_time is None:
-                            # Exponential backoff if no wait time specified
-                            wait_time = base_wait_time * (2 ** attempt)
-                        
-                        if attempt < max_retries - 1:
-                            print(f"Waiting {wait_time} seconds before retry...")
-                            time.sleep(wait_time)
-                            continue
-                        else:
-                            print(f"Max retries reached. Falling back to OpenAI.")
+                        # Rate limit hit - immediately fallback to Azure OpenAI instead of retrying
+                        print(f"⚠️ Azure Claude Rate Limit (429) - Switching to Azure OpenAI fallback...")
+                        break  # Exit the retry loop and go to fallback
                     
                     else:
                         print(f"Azure Claude Error: {response.status_code} - {response.text}")
-                        # Fallback to OpenAI if Azure fails with other errors
+                        # For other errors, try fallback immediately
+                        break
                         
                 except Exception as e:
                     print(f"Azure Claude Exception: {e}")
@@ -119,12 +107,15 @@ class LLMClient:
                         print(f"Retrying in {wait_time} seconds...")
                         time.sleep(wait_time)
                         continue
+                    else:
+                        # Last retry failed, go to fallback
+                        break
 
 
         # Fallback to Azure OpenAI after all Azure Claude retries exhausted
         if self.has_azure_openai:
             try:
-                print("Using Azure OpenAI fallback...")
+                print("🔄 Using Azure OpenAI fallback...")
                 resp = self.azure_openai_client.chat.completions.create(
                     model=self.azure_openai_deployment,  # Uses deployment name from env
                     messages=[
@@ -134,14 +125,57 @@ class LLMClient:
                     temperature=temperature,
                     max_tokens=max_tokens
                 )
+                print("✅ Azure OpenAI fallback successful")
                 return resp.choices[0].message.content
             except Exception as e:
-                print(f"Azure OpenAI Error: {e}")
+                print(f"❌ Azure OpenAI Error: {e}")
         else:
-            print("Azure OpenAI not configured - no fallback available")
+            print("❌ Azure OpenAI not configured - no fallback available")
         
         # Return empty JSON as last resort
+        print("⚠️ All LLM methods failed - returning empty result")
         return '{}'
 
-# Singleton instance
-llm_client = LLMClient()
+
+class OpenAIOnlyClient:
+    """
+    OpenAI-only client for Flow 2 processing.
+    Faster and more reliable than Claude for bulk processing.
+    """
+    def __init__(self):
+        try:
+            from openai import AzureOpenAI
+            self.client = AzureOpenAI(
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_version="2024-02-01",
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+            )
+            self.deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
+            print("✅ OpenAI-only client initialized for Flow 2")
+        except Exception as e:
+            print(f"❌ OpenAI client initialization failed: {e}")
+            self.client = None
+    
+    def chat_completion(self, system_prompt, user_message, temperature=0, max_tokens=1000):
+        if not self.client:
+            return '{}'
+        
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.deployment,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            return resp.choices[0].message.content
+        except Exception as e:
+            print(f"OpenAI Error: {e}")
+            return '{}'
+
+
+# Singleton instances
+llm_client = LLMClient()  # For chatbot (uses Claude + fallback)
+flow2_client = OpenAIOnlyClient()  # For Flow 2 (OpenAI only)
