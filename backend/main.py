@@ -10,7 +10,7 @@ if root_dir not in sys.path:
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from backend.processor import process_excel_flow_1
-from backend.database import get_collection
+from backend.database import get_collection, create_indexes
 from backend.auth import validate_credentials, create_session, verify_session, destroy_session, get_user_info
 from pydantic import BaseModel
 import io
@@ -20,6 +20,12 @@ from datetime import datetime
 from typing import Optional
 
 app = FastAPI(title="FMCG Product Mastering Platform")
+
+# Create MongoDB indexes on startup for faster upserts
+@app.on_event("startup")
+async def startup_event():
+    print("🚀 Creating MongoDB indexes...")
+    create_indexes()
 
 # CORS Configuration - Support direct port access
 app.add_middleware(
