@@ -737,7 +737,6 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
 
             doc["merge_id"] = doc.get("merge_id") or f"{doc['BRAND']}_{uuid.uuid4().hex}"
             
-            # Add sheet_name for tracking
             doc["sheet_name"] = "wersel_match"
 
             
