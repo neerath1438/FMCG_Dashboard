@@ -46,18 +46,27 @@ const FloatingChatbot = () => {
         try {
             const response = await chatbotAPI.sendQuery(question, sessionId);
 
-            const assistantMessage = {
-                role: 'assistant',
-                content: response.result.answer,
-                data: response.result.data,
-                resultCount: response.result.result_count,
-            };
-
-            setMessages(prev => [...prev, assistantMessage]);
+            if (response.status === 'success') {
+                const assistantMessage = {
+                    role: 'assistant',
+                    content: response.result.answer,
+                    data: response.result.data,
+                    resultCount: response.result.result_count,
+                };
+                setMessages(prev => [...prev, assistantMessage]);
+            } else {
+                const errorMessage = {
+                    role: 'assistant',
+                    content: response.message || 'Sorry, I encountered an error processing your query.',
+                    error: true,
+                };
+                setMessages(prev => [...prev, errorMessage]);
+            }
         } catch (error) {
+            console.error('Chatbot Error:', error);
             const errorMessage = {
                 role: 'assistant',
-                content: 'Sorry, I encountered an error. Please try again.',
+                content: error.response?.data?.message || 'Sorry, I encountered an error. Please try again.',
                 error: true,
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -99,8 +108,8 @@ const FloatingChatbot = () => {
             {isOpen && (
                 <div
                     className={`fixed z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden transition-all duration-300 ${isExpanded
-                            ? 'bottom-4 right-4 left-4 top-20 sm:left-auto sm:top-4 sm:w-[500px] sm:h-[calc(100vh-2rem)]'
-                            : 'bottom-24 right-4 w-[360px] h-[500px] sm:w-[400px] sm:h-[550px]'
+                        ? 'bottom-4 right-4 left-4 top-20 sm:left-auto sm:top-4 sm:w-[500px] sm:h-[calc(100vh-2rem)]'
+                        : 'bottom-24 right-4 w-[360px] h-[500px] sm:w-[400px] sm:h-[550px]'
                         }`}
                 >
                     {/* Header */}
@@ -168,10 +177,10 @@ const FloatingChatbot = () => {
                             >
                                 <div
                                     className={`max-w-[90%] rounded-2xl px-4 py-3 shadow-sm ${message.role === 'user'
-                                            ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white'
-                                            : message.error
-                                                ? 'bg-red-50 text-red-900 border border-red-200'
-                                                : 'bg-white text-gray-900 border border-gray-200'
+                                        ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white'
+                                        : message.error
+                                            ? 'bg-red-50 text-red-900 border border-red-200'
+                                            : 'bg-white text-gray-900 border border-gray-200'
                                         }`}
                                 >
                                     <div className="text-sm prose prose-sm max-w-none prose-pink prose-p:leading-relaxed prose-table:my-2 prose-th:bg-gray-50 prose-th:p-2 prose-td:p-2 prose-td:border prose-td:border-gray-100">

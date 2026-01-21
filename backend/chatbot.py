@@ -5,7 +5,7 @@ import httpx
 from backend.database import get_collection
 
 from datetime import datetime
-from backend.database import get_collection
+from backend.database import get_collection, MASTER_STOCK_COL
 from backend.llm_client import llm_client
 
 # Path for Domain Knowledge
@@ -47,7 +47,7 @@ def process_chatbot_query(question, session_id="default"):
     2. MongoDB -> Data (with sort)
     3. OpenAI -> Natural Language Answer
     """
-    master_coll = get_collection("MASTER_STOCK")
+    master_coll = get_collection(MASTER_STOCK_COL)
     question_lower = question.lower()
     
     # 1. HELP RESPONSE

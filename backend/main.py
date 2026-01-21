@@ -10,7 +10,7 @@ if root_dir not in sys.path:
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from backend.processor import process_excel_flow_1
-from backend.database import get_collection, create_indexes
+from backend.database import get_collection, create_indexes, RAW_DATA_COL, SINGLE_STOCK_COL, MASTER_STOCK_COL
 from backend.auth import validate_credentials, create_session, verify_session, destroy_session, get_user_info
 from pydantic import BaseModel
 import io
@@ -245,8 +245,8 @@ async def trigger_llm_mastering(sheet_name: str, request: Request = None):
 @app.get("/dashboard/summary")
 async def get_summary():
     """Get dashboard summary with merge statistics"""
-    single_stock_coll = get_collection("SINGLE_STOCK")
-    master_coll = get_collection("MASTER_STOCK")
+    single_stock_coll = get_collection(SINGLE_STOCK_COL)
+    master_coll = get_collection(MASTER_STOCK_COL)
     
     # Count documents in each collection
     single_stock_count = single_stock_coll.count_documents({})
@@ -299,7 +299,7 @@ async def get_summary():
 @app.get("/dashboard/products")
 async def get_products(limit: int = 100, skip: int = 0):
     """Get products with pagination and optimized fields"""
-    coll = get_collection("MASTER_STOCK")
+    coll = get_collection(MASTER_STOCK_COL)
     
     # Only return essential fields for list view
     projection = {
@@ -329,14 +329,14 @@ async def get_products(limit: int = 100, skip: int = 0):
 
 @app.get("/dashboard/product/{merge_id}")
 async def get_product_detail(merge_id: str):
-    coll = get_collection("MASTER_STOCK")
+    coll = get_collection(MASTER_STOCK_COL)
     product = coll.find_one({"merge_id": merge_id}, {"_id": 0})
     return product
 
 @app.get("/dashboard/low-confidence")
 async def get_low_confidence(limit: int = 100):
     """Get low confidence products with limit"""
-    coll = get_collection("MASTER_STOCK")
+    coll = get_collection(MASTER_STOCK_COL)
     
     # Only return essential fields
     projection = {
@@ -383,7 +383,7 @@ async def chatbot_query(request: dict):
 @app.get("/export/master-stock")
 async def export_master_stock():
     """Export MASTER_STOCK collection to Excel with clean columns"""
-    coll = get_collection("MASTER_STOCK")
+    coll = get_collection(MASTER_STOCK_COL)
     docs = list(coll.find({}, {"_id": 0}))
     
     if not docs:
@@ -442,37 +442,17 @@ async def export_master_stock():
 
 @app.post("/database/reset")
 async def reset_database():
-    """Reset all database collections"""
+    """Reset all main data collections (Single-Session Flow)"""
     try:
-        # Use the same database connection as the rest of the app
-        from backend.database import db
+        from backend.database import reset_main_collections
         
-        # Get all collection names
-        collections = db.list_collection_names()
-        
-        # Collections to reset
-        collections_to_reset = [
-            "SINGLE_STOCK",
-            "MASTER_STOCK", 
-            "LLM_CACHE_STORAGE"
-        ]
-        
-        # Add all RAW collections
-        raw_collections = [c for c in collections if c.endswith("_RAW")]
-        collections_to_reset.extend(raw_collections)
-        
-        # Delete all documents from each collection
-        deleted_counts = {}
-        for collection_name in collections_to_reset:
-            if collection_name in collections:
-                result = db[collection_name].delete_many({})
-                deleted_counts[collection_name] = result.deleted_count
+        # We only reset the main 3 data collections
+        # Metadata collections (CACHE, HISTORY) are PRESERVED
+        reset_main_collections()
         
         return {
             "status": "success",
-            "message": "Database reset successfully",
-            "deleted_counts": deleted_counts,
-            "total_deleted": sum(deleted_counts.values())
+            "message": f"Database main collections ({RAW_DATA_COL}, {SINGLE_STOCK_COL}, {MASTER_STOCK_COL}) reset successfully"
         }
     except Exception as e:
         return {

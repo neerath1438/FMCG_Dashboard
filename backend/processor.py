@@ -10,7 +10,7 @@ import time
 import asyncio
 from openai import OpenAI
 import httpx
-from backend.database import get_collection
+from backend.database import get_collection, reset_main_collections, RAW_DATA_COL, SINGLE_STOCK_COL, MASTER_STOCK_COL
 from backend.llm_client import llm_client, flow2_client  # Import both clients
 from concurrent.futures import ThreadPoolExecutor
 from pymongo import UpdateOne
@@ -60,6 +60,12 @@ async def process_excel_flow_1(file_contents, request=None):
     Merges sizes within 5g tolerance inside each group.
     """
     import io
+    
+    # ✅ STEP 0: Reset Database for Fresh Upload (Single-Session Flow)
+    reset_main_collections()
+    
+    # Fixed Sheet Name for all operations
+    FIXED_SHEET_NAME = "wersel_match"
     
     # Detect file type and read accordingly
     try:
@@ -113,14 +119,13 @@ async def process_excel_flow_1(file_contents, request=None):
         item_col = col_map.get("ITEM") or col_map.get("PRODUCT NAME") or col_map.get("DESCRIPTION")
         
         # Store raw data - Preserve all rows
-        raw_coll = get_collection(f"{sheet_name}_RAW")
-        raw_coll.delete_many({"sheet_name": "welrsel_match"})
+        raw_coll = get_collection(RAW_DATA_COL)
         
         rows_to_insert = []
         # Convert NaNs to None/empty for JSON safety before raw insert
         df_raw = df.replace({pd.NA: None, float('nan'): None})
         for row in df_raw.to_dict("records"):
-            row["sheet_name"] = "welrsel_match"
+            row["sheet_name"] = FIXED_SHEET_NAME
             rows_to_insert.append(row)
             
         if rows_to_insert:
@@ -297,8 +302,8 @@ async def process_excel_flow_1(file_contents, request=None):
         
         # ✅ OPTIMIZED: Direct MongoDB batch insert with parallel execution
         if single_stock_records:
-            single_stock_coll = get_collection("SINGLE_STOCK")
-            single_stock_coll.delete_many({"sheet_name": "wersel_match"})
+            single_stock_coll = get_collection(SINGLE_STOCK_COL)
+            single_stock_coll.delete_many({"sheet_name": FIXED_SHEET_NAME})
             
             # Batch insert with ordered=False for parallel execution (much faster)
             batch_size = 5000  # Larger batches for better performance
@@ -326,7 +331,7 @@ async def process_excel_flow_1(file_contents, request=None):
             
             print(f"[{sheet_name}] ✅ Saved {total_records} records to MongoDB")
         
-        sheets_info[sheet_name] = {
+        sheets_info[sheet_name] = {  # Keep original sheet name for UI, but data is in shared collection
             "raw_count": len(df),
             "single_stock_count": len(single_stock_records)
         }
@@ -550,19 +555,16 @@ def simple_clean_item(name):
 
 async def process_llm_mastering_flow_2(sheet_name, request=None):
     """
-    Flow 2: LLM-based mastering.
-    Reads from Parquet files (ultra-fast!), creates MASTER_STOCK with LLM-extracted attributes.
+    Flow 2: LLM Mastering.
+    Reads from single_stock_data, creates master_stock_data with LLM-extracted attributes.
     """
-    tgt_col = get_collection("MASTER_STOCK")
+    FIXED_SHEET_NAME = "wersel_match"
+    src_col = get_collection(SINGLE_STOCK_COL)
+    tgt_col = get_collection(MASTER_STOCK_COL)
     
-    # Clear previous master data for this sheet only
-    tgt_col.delete_many({"sheet_name": "wersel_match"})
-    
-    # ✅ Read from MongoDB (reliable)
-    print(f"Loading data from MongoDB for sheet: {sheet_name}...")
-    src_col = get_collection("SINGLE_STOCK")
-    docs = list(src_col.find({"sheet_name": "wersel_match"}))
-    print(f"Loaded {len(docs)} docs from MongoDB")
+    # Process items that match our fixed sheet name
+    docs = list(src_col.find({"sheet_name": FIXED_SHEET_NAME}))
+    print(f"Loaded {len(docs)} docs from MongoDB ({SINGLE_STOCK_COL})")
 
     
     groups = {}
