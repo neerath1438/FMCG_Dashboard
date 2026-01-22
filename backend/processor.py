@@ -97,6 +97,16 @@ async def process_excel_flow_1(file_contents, request=None):
         else:
             df = df_csv  # Use the CSV data
         
+        # ✅ FIX: Sort DataFrame for deterministic processing
+        # Ensures same file always processes in same order
+        sort_cols = []
+        for col in ['UPC', 'ITEM', 'MARKETS', 'MPACK', 'Facts']:
+            if col in df.columns:
+                sort_cols.append(col)
+        
+        if sort_cols:
+            df = df.sort_values(by=sort_cols).reset_index(drop=True)
+        
         # KEY COLUMN IDENTIFICATION
         # Normalize columns slightly for matching but keep original for access
         col_map = {c.upper().strip(): c for c in df.columns}
