@@ -44,7 +44,7 @@ const Analytics = () => {
     return (
         <div className="space-y-6">
             {/* Summary Stats - Glass cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                     <p className="text-sm text-gray-500 uppercase tracking-wide">Total Products</p>
                     <p className="text-3xl font-bold text-gray-900 mt-2">{data.totalProducts?.toLocaleString()}</p>
@@ -57,24 +57,27 @@ const Analytics = () => {
                     <p className="text-sm text-gray-500 uppercase tracking-wide">Merged Products</p>
                     <p className="text-3xl font-bold text-gray-900 mt-2">{data.mergedProducts?.toLocaleString()}</p>
                 </Card>
-                <Card>
-                    <p className="text-sm text-gray-500 uppercase tracking-wide">Avg Confidence</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">
-                        {data.avgConfidence ? (data.avgConfidence * 100).toFixed(1) + '%' : 'N/A'}
-                    </p>
-                </Card>
             </div>
 
             {/* Charts - Glass cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Brand Distribution */}
-                <Card title="Top 10 Brands" subtitle="Product count by brand">
+                <Card title="Top 10 Brands" subtitle="Product count by brand - Click bar to view products">
                     <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={data.brandDistribution || []}>
+                        <BarChart
+                            data={data.brandDistribution || []}
+                            onClick={(data) => {
+                                if (data && data.activePayload && data.activePayload[0]) {
+                                    const brandName = data.activePayload[0].payload.name;
+                                    navigate(`/products?brand=${encodeURIComponent(brandName)}`);
+                                }
+                            }}
+                        >
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} tick={{ fontSize: 12 }} />
                             <YAxis tick={{ fontSize: 12 }} />
                             <Tooltip
+                                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                                 contentStyle={{
                                     background: 'rgba(255,255,255,0.9)',
                                     backdropFilter: 'blur(8px)',
@@ -82,7 +85,7 @@ const Analytics = () => {
                                     borderRadius: '12px'
                                 }}
                             />
-                            <Bar dataKey="value" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="value" fill="#f43f5e" radius={[4, 4, 0, 0]} className="cursor-pointer" />
                         </BarChart>
                     </ResponsiveContainer>
                 </Card>

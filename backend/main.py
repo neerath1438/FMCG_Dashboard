@@ -259,7 +259,7 @@ async def get_summary():
     unique_upcs = raw_coll.distinct("UPC")
     unique_upcs_count = len([u for u in unique_upcs if u])
     
-    # Get unique Brands count from RAW_DATA to match original file
+    # Get unique Brands count from RAW_DATA (original file - to verify AI accuracy)
     unique_brands = raw_coll.distinct("BRAND")
     unique_brands_count = len([b for b in unique_brands if b])
     
@@ -304,7 +304,16 @@ async def get_products(limit: int = 100, skip: int = 0, search: str = None, bran
     
     query = {}
     if brand and brand != 'all':
-        query["BRAND"] = brand
+        # Special handling for UNKNOWN brand - match NULL, empty, or "UNKNOWN"
+        if brand == 'UNKNOWN':
+            query["$or"] = [
+                {"BRAND": {"$exists": False}},
+                {"BRAND": None},
+                {"BRAND": ""},
+                {"BRAND": "UNKNOWN"}
+            ]
+        else:
+            query["BRAND"] = brand
     
     if search:
         query["$or"] = [
@@ -511,32 +520,39 @@ async def export_master_stock():
         output = io.StringIO()
         writer = None
         
-        # Define essential columns
+        # Define essential columns (ALL CAPS)
         essential_columns = [
-            "UPC", "merge_id", "sheet_name", "brand", "flavour", "size", 
-            "normalized_item", "ITEM", "MANUFACTURER", "Product Segment",
-            "Markets", "MPACK", "Facts", "Dec 23 - w/e 31/12/23",
-            "Jan 24 - w/e 31/01/24", "Feb 24 - w/e 29/02/24", "Mar 24 - w/e 31/03/24",
-            "Apr 24 - w/e 30/04/24", "May 24 - w/e 31/05/24", "Jun 24 - w/e 30/06/24",
-            "Jul 24 - w/e 31/07/24", "Aug 24 - w/e 31/08/24", "Sep 24 - w/e 30/09/24",
-            "Oct 24 - w/e 31/10/24", "Nov 24 - w/e 30/11/24", "MAT Nov'24",
-            "merge_items", "merged_from_docs", "merge_level", "merge_rule",
-            "llm_confidence_min"
+            "UPC", "MERGE_ID", "SHEET_NAME", "BRAND", "FLAVOUR", "SIZE", 
+            "NORMALIZED_ITEM", "ITEM", "MANUFACTURER", "PRODUCT_SEGMENT",
+            "MARKETS", "MPACK", "FACTS", "DEC_23", "JAN_24", "FEB_24", "MAR_24",
+            "APR_24", "MAY_24", "JUN_24", "JUL_24", "AUG_24", "SEP_24",
+            "OCT_24", "NOV_24", "MAT_NOV_24",
+            "MERGE_ITEMS", "MERGED_FROM_DOCS", "MERGE_LEVEL", "MERGE_RULE",
+            "LLM_CONFIDENCE_MIN"
         ]
         
         count = 0
         try:
             for doc in docs_cursor:
-                # Format list/complex types for CSV
+                # Convert all keys to UPPERCASE
+                doc_upper = {}
                 for key, val in doc.items():
-                    if isinstance(val, (list, dict)):
-                        doc[key] = " | ".join(map(str, val)) if isinstance(val, list) else str(val)
+                    key_upper = key.upper().replace(" ", "_").replace("-", "_").replace("/", "_").replace("'", "")
+                    
+                    # Special formatting for merge_items - pipe separated without spaces
+                    if key == "merge_items" and isinstance(val, list):
+                        doc_upper[key_upper] = "|".join(map(str, val))
+                    # Format other lists/dicts
+                    elif isinstance(val, (list, dict)):
+                        doc_upper[key_upper] = " | ".join(map(str, val)) if isinstance(val, list) else str(val)
+                    else:
+                        doc_upper[key_upper] = val
                 
                 # Initialize writer with headers on first row
                 if writer is None:
                     # Use all keys from the first document as the schema
-                    headers = [col for col in essential_columns if col in doc]
-                    other_cols = [col for col in doc.keys() if col not in essential_columns]
+                    headers = [col for col in essential_columns if col in doc_upper]
+                    other_cols = [col for col in doc_upper.keys() if col not in essential_columns]
                     headers.extend(other_cols)
                     
                     # extrasaction='ignore' is CRITICAL because MongoDB docs can have varying keys
@@ -544,7 +560,8 @@ async def export_master_stock():
                     writer.writeheader()
                 
                 # Write row
-                writer.writerow(doc)
+                writer.writerow(doc_upper)
+
                 
                 # Yield data in chunks
                 if count % 1000 == 0:

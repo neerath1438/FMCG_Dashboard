@@ -736,7 +736,11 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             item_name = group_docs[0].get("ITEM")
             norm = norm_map.get(item_name, {})
             
-            doc["brand"] = norm.get("brand")
+            # If BRAND field missing, use LLM extracted brand
+            if not doc.get("BRAND"):
+                doc["BRAND"] = norm.get("brand") or "UNKNOWN"
+            
+            # Store LLM extracted fields (flavour, size are not duplicates)
             doc["flavour"] = norm.get("flavour")
             doc["size"] = norm.get("size")
             doc["normalized_item"] = norm.get("base_item")
@@ -795,7 +799,11 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         item_name = group_docs[0].get("ITEM")
         norm = norm_map.get(item_name, {})
         
-        base["brand"] = norm.get("brand") or base.get("BRAND", "")
+        # If BRAND field missing, use LLM extracted brand
+        if not base.get("BRAND"):
+            base["BRAND"] = norm.get("brand") or "UNKNOWN"
+        
+        # Store LLM extracted fields (flavour, size are not duplicates)
         base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
         base["size"] = norm.get("size") or base.get("NRMSIZE", "")
         base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")

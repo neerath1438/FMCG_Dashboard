@@ -11,18 +11,26 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 const Products = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const confidenceStatusParam = searchParams.get('confidence_status') || 'all';
+    const brandParam = searchParams.get('brand');
 
     const [products, setProducts] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterBrand, setFilterBrand] = useState('all');
+    const [filterBrand, setFilterBrand] = useState(brandParam || 'all');
     const [hasMore, setHasMore] = useState(true);
     const [skip, setSkip] = useState(0);
     const [viewMode, setViewMode] = useState('grid');
     const limit = 100;
     const navigate = useNavigate();
+
+    // Update filter when URL parameter changes
+    useEffect(() => {
+        if (brandParam && brandParam !== filterBrand) {
+            setFilterBrand(brandParam);
+        }
+    }, [brandParam]);
 
     useEffect(() => {
         fetchInitialData();
