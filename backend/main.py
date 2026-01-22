@@ -245,22 +245,29 @@ async def trigger_llm_mastering(sheet_name: str, request: Request = None):
 @app.get("/dashboard/summary")
 async def get_summary():
     """Get dashboard summary with merge statistics"""
-    single_stock_coll = get_collection(SINGLE_STOCK_COL)
+    raw_coll = get_collection(RAW_DATA_COL)
     master_coll = get_collection(MASTER_STOCK_COL)
     
-    # Count documents in each collection
-    single_stock_count = single_stock_coll.count_documents({})
+    # Count documents
+    raw_data_count = raw_coll.count_documents({})
     master_stock_count = master_coll.count_documents({})
     
-    # Calculate merge count
-    items_merged = single_stock_count - master_stock_count if single_stock_count > master_stock_count else 0
+    # Calculate merge count (Input Rows - Output Rows)
+    items_merged = raw_data_count - master_stock_count if raw_data_count > master_stock_count else 0
     
-    # Get detailed statistics from MASTER_STOCK
+    # Get unique UPCs count from RAW_DATA to match original file
+    unique_upcs = raw_coll.distinct("UPC")
+    unique_upcs_count = len([u for u in unique_upcs if u])
+    
+    # Get unique Brands count from RAW_DATA to match original file
+    unique_brands = raw_coll.distinct("BRAND")
+    unique_brands_count = len([b for b in unique_brands if b])
+    
+    # Get detailed statistics from MASTER_STOCK for other metrics
     pipeline = [
         {
             "$group": {
                 "_id": None,
-                "unique_upcs": {"$addToSet": "$UPC"},
                 "merged_items": {"$sum": {"$cond": [{"$gt": ["$merged_from_docs", 1]}, 1, 0]}},
                 "single_items": {"$sum": {"$cond": [{"$lte": ["$merged_from_docs", 1]}, 1, 0]}},
                 "low_confidence_count": {"$sum": {"$cond": [{"$lt": ["$llm_confidence_min", 0.8]}, 1, 0]}}
@@ -271,22 +278,16 @@ async def get_summary():
     result = list(master_coll.aggregate(pipeline))
     
     if result:
-        unique_upcs_count = len(result[0].get("unique_upcs", []))
         merged_items = result[0].get("merged_items", 0)
         single_items = result[0].get("single_items", 0)
         low_confidence = result[0].get("low_confidence_count", 0)
     else:
-        unique_upcs_count = 0
         merged_items = 0
         single_items = 0
         low_confidence = 0
     
-    # Get unique brands count (using original BRAND column)
-    unique_brands = master_coll.distinct("BRAND")
-    unique_brands_count = len([b for b in unique_brands if b])  # Filter out empty/null brands
-    
     return {
-        "single_stock_rows": single_stock_count,
+        "single_stock_rows": raw_data_count, # Returning raw count as "Input Rows"
         "master_stock_rows": master_stock_count,
         "items_merged": items_merged,
         "unique_upcs": unique_upcs_count,
@@ -297,9 +298,30 @@ async def get_summary():
     }
 
 @app.get("/dashboard/products")
-async def get_products(limit: int = 100, skip: int = 0):
-    """Get products with pagination and optimized fields"""
+async def get_products(limit: int = 100, skip: int = 0, search: str = None, brand: str = None, confidence_status: str = 'all'):
+    """Get products with server-side filtering and pagination"""
     coll = get_collection(MASTER_STOCK_COL)
+    
+    query = {}
+    if brand and brand != 'all':
+        query["BRAND"] = brand
+    
+    if search:
+        query["$or"] = [
+            {"ITEM": {"$regex": search, "$options": "i"}},
+            {"BRAND": {"$regex": search, "$options": "i"}},
+            {"UPC": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # New Confidence Status Filter
+    if confidence_status == 'na':
+        query["$or"] = [
+            {"llm_confidence_min": {"$exists": False}},
+            {"llm_confidence_min": None},
+            {"llm_confidence_min": 0}
+        ]
+    elif confidence_status == 'scored':
+        query["llm_confidence_min"] = {"$gt": 0}
     
     # Only return essential fields for list view
     projection = {
@@ -313,18 +335,113 @@ async def get_products(limit: int = 100, skip: int = 0):
         "llm_confidence_min": 1,
         "brand": 1,
         "flavour": 1,
-        "size": 1
+        "size": 1,
+        "MARKETS": 1,
+        "MARKET": 1
     }
     
-    # Use limit and skip for pagination
-    products = list(coll.find({}, projection).limit(limit).skip(skip))
-    total_count = coll.count_documents({})
+    products = list(coll.find(query, projection).limit(limit).skip(skip))
+    total_count = coll.count_documents(query)
     
     return {
         "products": products,
         "total": total_count,
         "limit": limit,
         "skip": skip
+    }
+
+@app.get("/dashboard/brands")
+async def get_all_brands():
+    """Get list of all unique brands in MASTER_STOCK"""
+    coll = get_collection(MASTER_STOCK_COL)
+    brands = sorted([b for b in coll.distinct("BRAND") if b])
+    return {"brands": brands}
+
+@app.get("/dashboard/analytics-data")
+async def get_analytics_data():
+    """Get calculated analytics metrics via aggregation pipelines"""
+    master_coll = get_collection(MASTER_STOCK_COL)
+    
+    # 1. Base Stats
+    raw_coll = get_collection(RAW_DATA_COL)
+    total_products = master_coll.count_documents({})
+    unique_brands_count = len([b for b in master_coll.distinct("BRAND") if b])
+    
+    raw_data_count = raw_coll.count_documents({})
+    merged_products_count = raw_data_count - total_products if raw_data_count > total_products else 0
+    
+    # 2. Avg Confidence and Distribution
+    confidence_pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "avg_confidence": {"$avg": "$llm_confidence_min"},
+                "conf_90_100": {"$sum": {"$cond": [{"$gte": ["$llm_confidence_min", 0.9]}, 1, 0]}},
+                "conf_80_90": {"$sum": {"$cond": [{"$and": [{"$gte": ["$llm_confidence_min", 0.8]}, {"$lt": ["$llm_confidence_min", 0.9]}]}, 1, 0]}},
+                "conf_70_80": {"$sum": {"$cond": [{"$and": [{"$gte": ["$llm_confidence_min", 0.7]}, {"$lt": ["$llm_confidence_min", 0.8]}]}, 1, 0]}},
+                "conf_60_70": {"$sum": {"$cond": [{"$and": [{"$gte": ["$llm_confidence_min", 0.6]}, {"$lt": ["$llm_confidence_min", 0.7]}]}, 1, 0]}},
+                "conf_below_60": {"$sum": {"$cond": [{"$and": [{"$lt": ["$llm_confidence_min", 0.6]}, {"$gt": ["$llm_confidence_min", 0]}]}, 1, 0]}},
+                "conf_na": {"$sum": {"$cond": [{"$or": [{"$not": ["$llm_confidence_min"]}, {"$eq": ["$llm_confidence_min", 0]}]}, 1, 0]}}
+            }
+        }
+    ]
+    
+    conf_res = list(master_coll.aggregate(confidence_pipeline))
+    avg_conf = conf_res[0].get("avg_confidence", 0) if conf_res else 0
+    
+    confidence_dist = [
+        {"name": "90-100%", "value": conf_res[0].get("conf_90_100", 0) if conf_res else 0},
+        {"name": "80-90%", "value": conf_res[0].get("conf_80_90", 0) if conf_res else 0},
+        {"name": "70-80%", "value": conf_res[0].get("conf_70_80", 0) if conf_res else 0},
+        {"name": "60-70%", "value": conf_res[0].get("conf_60_70", 0) if conf_res else 0},
+        {"name": "Below 60%", "value": conf_res[0].get("conf_below_60", 0) if conf_res else 0},
+        {"name": "N/A", "value": conf_res[0].get("conf_na", 0) if conf_res else 0, "isNA": True},
+    ]
+
+    # 3. Brand Distribution (Top 10)
+    brand_pipeline = [
+        {"$group": {"_id": "$BRAND", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+        {"$project": {"name": "$_id", "value": "$count", "_id": 0}}
+    ]
+    brand_dist = list(master_coll.aggregate(brand_pipeline))
+
+    # 4. Merge Level Distribution
+    merge_pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "single": {"$sum": {"$cond": [{"$lte": ["$merged_from_docs", 1]}, 1, 0]}},
+                "merge_2_5": {"$sum": {"$cond": [{"$and": [{"$gt": ["$merged_from_docs", 1]}, {"$lte": ["$merged_from_docs", 5]}]}, 1, 0]}},
+                "merge_6_10": {"$sum": {"$cond": [{"$and": [{"$gt": ["$merged_from_docs", 5]}, {"$lte": ["$merged_from_docs", 10]}]}, 1, 0]}},
+                "merge_10_plus": {"$sum": {"$cond": [{"$gt": ["$merged_from_docs", 10]}, 1, 0]}}
+            }
+        }
+    ]
+    merge_res = list(master_coll.aggregate(merge_pipeline))
+    merge_dist = [
+        {"name": "Single Item", "value": merge_res[0].get("single", 0) if merge_res else 0},
+        {"name": "Merged (2-5)", "value": merge_res[0].get("merge_2_5", 0) if merge_res else 0},
+        {"name": "Merged (6-10)", "value": merge_res[0].get("merge_6_10", 0) if merge_res else 0},
+        {"name": "Merged (10+)", "value": merge_res[0].get("merge_10_plus", 0) if merge_res else 0},
+    ]
+
+    # 5. Top Merged Products
+    top_merged = list(master_coll.find(
+        {"merged_from_docs": {"$gt": 1}},
+        {"_id": 0, "BRAND": 1, "ITEM": 1, "merged_from_docs": 1, "MARKETS": 1, "MARKET": 1}
+    ).sort("merged_from_docs", -1).limit(5))
+
+    return {
+        "totalProducts": total_products,
+        "uniqueBrands": unique_brands_count,
+        "mergedProducts": merged_products_count,
+        "avgConfidence": avg_conf,
+        "brandDistribution": brand_dist,
+        "mergeLevelDistribution": merge_dist,
+        "confidenceDistribution": confidence_dist,
+        "topMerged": top_merged
     }
 
 @app.get("/dashboard/product/{merge_id}")
@@ -382,77 +499,92 @@ async def chatbot_query(request: dict):
 
 @app.get("/export/master-stock")
 async def export_master_stock():
-    """Export MASTER_STOCK collection to Excel with clean columns"""
+    """Export MASTER_STOCK collection to CSV with clean columns"""
+    print("📤 Starting export of master stock data...")
     coll = get_collection(MASTER_STOCK_COL)
-    docs = list(coll.find({}, {"_id": 0}))
     
-    if not docs:
-        return {"error": "No data to export"}
+    # Use find().batch_size to efficient memory management
+    docs_cursor = coll.find({}, {"_id": 0})
     
-    # Flatten the data
-    df = pd.DataFrame(docs)
-    
-    # Define essential columns to export (remove duplicates and internal fields)
-    essential_columns = [
-        # Identifiers
-        "UPC", "merge_id", "sheet_name",
+    def generate_csv():
+        import csv
+        output = io.StringIO()
+        writer = None
         
-        # LLM Extracted (Clean versions)
-        "brand", "flavour", "size", "normalized_item",
+        # Define essential columns
+        essential_columns = [
+            "UPC", "merge_id", "sheet_name", "brand", "flavour", "size", 
+            "normalized_item", "ITEM", "MANUFACTURER", "Product Segment",
+            "Markets", "MPACK", "Facts", "Dec 23 - w/e 31/12/23",
+            "Jan 24 - w/e 31/01/24", "Feb 24 - w/e 29/02/24", "Mar 24 - w/e 31/03/24",
+            "Apr 24 - w/e 30/04/24", "May 24 - w/e 31/05/24", "Jun 24 - w/e 30/06/24",
+            "Jul 24 - w/e 31/07/24", "Aug 24 - w/e 31/08/24", "Sep 24 - w/e 30/09/24",
+            "Oct 24 - w/e 31/10/24", "Nov 24 - w/e 30/11/24", "MAT Nov'24",
+            "merge_items", "merged_from_docs", "merge_level", "merge_rule",
+            "llm_confidence_min"
+        ]
         
-        # Original Product Info (only if LLM fields don't exist)
-        "ITEM", "MANUFACTURER", "Product Segment",
+        count = 0
+        try:
+            for doc in docs_cursor:
+                # Format list/complex types for CSV
+                for key, val in doc.items():
+                    if isinstance(val, (list, dict)):
+                        doc[key] = " | ".join(map(str, val)) if isinstance(val, list) else str(val)
+                
+                # Initialize writer with headers on first row
+                if writer is None:
+                    # Use all keys from the first document as the schema
+                    headers = [col for col in essential_columns if col in doc]
+                    other_cols = [col for col in doc.keys() if col not in essential_columns]
+                    headers.extend(other_cols)
+                    
+                    # extrasaction='ignore' is CRITICAL because MongoDB docs can have varying keys
+                    writer = csv.DictWriter(output, fieldnames=headers, extrasaction='ignore')
+                    writer.writeheader()
+                
+                # Write row
+                writer.writerow(doc)
+                
+                # Yield data in chunks
+                if count % 1000 == 0:
+                    yield output.getvalue()
+                    output.truncate(0)
+                    output.seek(0)
+                
+                count += 1
+                if count % 10000 == 0:
+                    print(f"✅ Exported {count} rows...")
+        except Exception as e:
+            print(f"❌ Error during CSV generation at row {count}: {e}")
+            # We can't change the status code now because headers are already sent
+            # But we can yield an error message in the CSV itself
+            output.write(f"\nERROR: Export interrupted. Error: {str(e)}\n")
+            yield output.getvalue()
         
-        # Attributes
-        "Markets", "MPACK", "Facts", 
-        
-        # Monthly Data (all w/e columns)
-        "Dec 23 - w/e 31/12/23",
-        "Jan 24 - w/e 31/01/24", "Feb 24 - w/e 29/02/24", "Mar 24 - w/e 31/03/24",
-        "Apr 24 - w/e 30/04/24", "May 24 - w/e 31/05/24", "Jun 24 - w/e 30/06/24",
-        "Jul 24 - w/e 31/07/24", "Aug 24 - w/e 31/08/24", "Sep 24 - w/e 30/09/24",
-        "Oct 24 - w/e 31/10/24", "Nov 24 - w/e 30/11/24",
-        "MAT Nov'24",
-        
-        # Merge Metadata
-        "merge_items", "merged_from_docs", "merge_level", "merge_rule",
-        "llm_confidence_min"
-    ]
-    
-    # Select only columns that exist in the dataframe
-    export_columns = [col for col in essential_columns if col in df.columns]
-    df = df[export_columns]
-    
-    # Format list columns for Excel
-    if "merge_items" in df.columns:
-        df["merge_items"] = df["merge_items"].apply(lambda x: " | ".join(map(str, x)) if isinstance(x, list) else x)
-    if "merged_upcs" in df.columns:
-        df["merged_upcs"] = df["merged_upcs"].apply(lambda x: ", ".join(map(str, x)) if isinstance(x, list) else x)
-    
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='MasterStock')
-    
-    output.seek(0)
-    
+        # Final yield
+        yield output.getvalue()
+        print(f"🎉 Export complete. Total rows: {count}")
+
     headers = {
-        'Content-Disposition': 'attachment; filename="master_stock_export.xlsx"'
+        'Content-Disposition': 'attachment; filename="master_stock_export.csv"'
     }
-    return StreamingResponse(output, headers=headers, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    return StreamingResponse(generate_csv(), headers=headers, media_type='text/csv')
 
 @app.post("/database/reset")
-async def reset_database():
-    """Reset all main data collections (Single-Session Flow)"""
+async def reset_database(clear_cache: bool = False):
+    """Clear all data collections. Optionally clears LLM cache as well."""
+    from backend.database import reset_main_collections, clear_llm_cache
+    
     try:
-        from backend.database import reset_main_collections
-        
-        # We only reset the main 3 data collections
-        # Metadata collections (CACHE, HISTORY) are PRESERVED
         reset_main_collections()
-        
+        if clear_cache:
+            clear_llm_cache()
+            
         return {
-            "status": "success",
-            "message": f"Database main collections ({RAW_DATA_COL}, {SINGLE_STOCK_COL}, {MASTER_STOCK_COL}) reset successfully"
+            "status": "success", 
+            "message": "Database reset successful" + (" and cache cleared" if clear_cache else ""),
+            "cache_cleared": clear_cache
         }
     except Exception as e:
         return {

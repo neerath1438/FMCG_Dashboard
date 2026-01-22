@@ -36,6 +36,14 @@ def reset_main_collections():
     except Exception as e:
         print(f"⚠️ Reset error: {e}")
 
+def clear_llm_cache():
+    """Clear the persistent LLM cache storage."""
+    try:
+        db["LLM_CACHE_STORAGE"].delete_many({})
+        print("🧹 Cache cleared: LLM_CACHE_STORAGE emptied.")
+    except Exception as e:
+        print(f"⚠️ Cache clear error: {e}")
+
 def create_indexes():
     """
     Create MongoDB indexes for faster upserts and queries.

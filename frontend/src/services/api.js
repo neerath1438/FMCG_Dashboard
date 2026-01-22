@@ -51,11 +51,14 @@ export const verifyAuthAPI = (token) => api.get('/auth/verify', {
 // API methods
 export const dashboardAPI = {
     getSummary: () => api.get('/dashboard/summary'),
-    getProducts: (limit = 100, skip = 0) => api.get(`/dashboard/products?limit=${limit}&skip=${skip}`),
+    getBrands: () => api.get('/dashboard/brands'),
+    getProducts: (limit = 100, skip = 0, search = '', brand = '', confidenceStatus = 'all') =>
+        api.get(`/dashboard/products?limit=${limit}&skip=${skip}&search=${search}&brand=${brand}&confidence_status=${confidenceStatus}`),
     getProduct: (mergeId) => api.get(`/dashboard/product/${mergeId}`),
     getLowConfidence: () => api.get('/dashboard/low-confidence'),
+    getAnalyticsData: () => api.get('/dashboard/analytics-data'),
     exportMasterStock: () => api.get('/export/master-stock', { responseType: 'blob' }),
-    resetDatabase: () => api.post('/database/reset'),
+    resetDatabase: (clearCache = false) => api.post(`/database/reset?clear_cache=${clearCache}`),
 };
 
 export const uploadAPI = {

@@ -575,45 +575,67 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
 
     unique_items = list(set([d.get("ITEM") for d in docs if d.get("ITEM")]))
     
-    norm_map = {}
+    # ✅ Optimization: Group unique items by their "Clean Keys" to reduce redundant LLM calls
+    clean_groups = {} # {clean_key: [original_items]}
+    for item in unique_items:
+        ckey = simple_clean_item(item)
+        clean_groups.setdefault(ckey, []).append(item)
+    
+    # Representative items to send to LLM
+    representative_items = []
+    ckey_to_rep = {} # {clean_key: representative_item}
+    
+    for ckey, items in clean_groups.items():
+        # Choose the longest name as representative (usually most descriptive)
+        rep = max(items, key=len)
+        representative_items.append(rep)
+        ckey_to_rep[ckey] = rep
+
+    norm_map = {} # {original_item: result}
+    rep_results = {} # {representative_item: result}
     
     # Process in batches to avoid rate limits
-    batch_size = 500  # Increased from 50 for faster processing
-    total_batches = (len(unique_items) + batch_size - 1) // batch_size
+    batch_size = 500
+    total_batches = (len(representative_items) + batch_size - 1) // batch_size
     
-    print(f"Processing {len(unique_items)} unique items in {total_batches} batches...")
+    print(f"Processing {len(representative_items)} representative items (from {len(unique_items)} total unique) in {total_batches} batches...")
     
-    # ✅ Strategy 2: Pre-load cache from MongoDB to avoid 10,000 individual queries
+    # ✅ Strategy 2: Pre-load cache from MongoDB
     try:
         cache_coll = get_collection("LLM_CACHE_STORAGE")
-        existing_cache = {doc["item"]: doc["result"] for doc in cache_coll.find({"item": {"$in": unique_items}})}
+        # Pre-load only for representative items
+        existing_cache = {doc["item"]: doc["result"] for doc in cache_coll.find({"item": {"$in": representative_items}})}
         llm_cache.update(existing_cache)
         print(f"Pre-loaded {len(existing_cache)} items from persistent cache.")
     except Exception as e:
         print(f"Error pre-loading cache: {e}")
 
     for batch_num in range(total_batches):
-        # Check for disconnection every 10 batches (not every batch to avoid false positives)
         if batch_num % 10 == 0 and request and await request.is_disconnected():
             print(f"Stopping Flow 2: Client disconnected before batch {batch_num + 1}")
             return {"status": "Stopped | Client disconnected"}
 
         start_idx = batch_num * batch_size
-        end_idx = min((batch_num + 1) * batch_size, len(unique_items))
-        batch_items = unique_items[start_idx:end_idx]
+        end_idx = min((batch_num + 1) * batch_size, len(representative_items))
+        batch_reps = representative_items[start_idx:end_idx]
         
-        print(f"Batch {batch_num + 1}/{total_batches}: Processing {len(batch_items)} items...")
+        print(f"Batch {batch_num + 1}/{total_batches}: Calling LLM for {len(batch_reps)} items...")
         
-        # ✅ OpenAI-ONLY: Can use more workers since no Claude rate limits
-        # OpenAI has much higher limits, so we can process faster
-        with ThreadPoolExecutor(max_workers=50) as executor:  # Back to 50 for OpenAI
-            results = list(executor.map(normalize_item_llm, batch_items))
-            for item, res in zip(batch_items, results):
-                norm_map[item] = res
+        with ThreadPoolExecutor(max_workers=50) as executor:
+            results = list(executor.map(normalize_item_llm, batch_reps))
+            for item, res in zip(batch_reps, results):
+                rep_results[item] = res
         
-        # Minimal wait between batches for OpenAI
         if batch_num < total_batches - 1:
-            await asyncio.sleep(0.5)  # Reduced from 6s to 0.5s for OpenAI
+            await asyncio.sleep(0.5)
+
+    # Propagate results back to all original unique items in groups
+    for ckey, items in clean_groups.items():
+        rep = ckey_to_rep[ckey]
+        res = rep_results.get(rep)
+        if res:
+            for item in items:
+                norm_map[item] = res
 
             
     # 2. Grouping Phase: Consistently group docs based on extracted attributes + Strict Keys
@@ -718,6 +740,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             doc["flavour"] = norm.get("flavour")
             doc["size"] = norm.get("size")
             doc["normalized_item"] = norm.get("base_item")
+            doc["llm_confidence_min"] = norm.get("confidence", 0)
 
             extend_merge_metadata(
                 base=doc,

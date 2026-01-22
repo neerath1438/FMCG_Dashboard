@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Download, Trash2, TrendingUp, Zap, Bell, Users, RefreshCw, ArrowRight } from 'lucide-react';
 import Card from '../components/ui/Card';
-import Table from '../components/ui/Table';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -47,9 +46,9 @@ const CircularProgress = ({ percentage = 0, size = 48, strokeWidth = 4 }) => {
 
 const Dashboard = () => {
     const [summary, setSummary] = useState(null);
-    const [recentProducts, setRecentProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -58,17 +57,8 @@ const Dashboard = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [summaryData, productsData] = await Promise.all([
-                dashboardAPI.getSummary(),
-                dashboardAPI.getProducts()
-            ]);
-
+            const summaryData = await dashboardAPI.getSummary();
             setSummary(summaryData?.data || summaryData);
-
-            // Handle new paginated response format
-            const productsResponse = productsData?.data || productsData;
-            const products = productsResponse?.products || productsResponse;
-            setRecentProducts(Array.isArray(products) ? products.slice(0, 10) : []);
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
         } finally {
@@ -78,11 +68,12 @@ const Dashboard = () => {
 
     const handleExport = async () => {
         try {
+            setExporting(true);
             const blob = await dashboardAPI.exportMasterStock();
-            const url = window.URL.createObjectURL(new Blob([blob]));
+            const url = window.URL.createObjectURL(new Blob([blob], { type: 'text/csv' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `Master_Stock_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+            link.setAttribute('download', `Master_Stock_Export_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             link.parentNode.removeChild(link);
@@ -90,70 +81,44 @@ const Dashboard = () => {
         } catch (error) {
             console.error('Export failed:', error);
             alert('Failed to export data. Please try again.');
+        } finally {
+            setExporting(false);
         }
     };
 
-    const handleResetDatabase = async () => {
-        const confirmed = window.confirm(
-            'WARNING: This will delete ALL data from the database!\n\n' +
+    const handleResetDatabase = async (clearCache = false) => {
+        const message = clearCache
+            ? 'WARNING: This will delete ALL data AND clear the AI Cache!\n\n' +
             'This includes:\n' +
-            '- All uploaded files (RAW data)\n' +
-            '- All processed products (SINGLE_STOCK)\n' +
-            '- All master products (MASTER_STOCK)\n' +
-            '- All LLM cache\n\n' +
-            'This action CANNOT be undone!\n\n' +
-            'Are you sure you want to continue?'
-        );
+            '- All uploaded files\n' +
+            '- All processed products\n' +
+            '- All AI knowledge (Cache)\n\n' +
+            'This will force the AI to re-process EVERYTHING. This is recommended for a 100% "Fresh Start".\n\n' +
+            'Are you sure?'
+            : 'WARNING: This will delete all products but KEEP the AI Cache.\n\n' +
+            'Are you sure?';
+
+        const confirmed = window.confirm(message);
 
         if (!confirmed) return;
 
         try {
-            const result = await dashboardAPI.resetDatabase();
+            setLoading(true);
+            const result = await dashboardAPI.resetDatabase(clearCache);
             if (result.status === 'success') {
-                alert(`Database reset successfully!\n\nDeleted ${result.total_deleted} records from ${Object.keys(result.deleted_counts).length} collections.`);
+                alert(`System reset successfully! ${clearCache ? 'AI Cache cleared.' : ''}`);
                 fetchData();
             } else {
                 alert(`Reset failed: ${result.message}`);
             }
         } catch (error) {
             console.error('Reset failed:', error);
-            alert('Failed to reset database. Please try again.');
+            alert('Failed to reset system. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const columns = [
-        { key: 'BRAND', label: 'Brand', sortable: true },
-        {
-            key: 'ITEM',
-            label: 'Product',
-            sortable: true,
-            render: (value) => (
-                <span className="max-w-xs truncate block">{value || 'N/A'}</span>
-            )
-        },
-        { key: 'UPC', label: 'UPC', sortable: true },
-        {
-            key: 'merged_from_docs',
-            label: 'Merged Docs',
-            sortable: true,
-            render: (value) => (
-                <Badge variant={value > 1 ? 'glass-success' : 'glass-info'} size="sm">
-                    {value || 1}
-                </Badge>
-            )
-        },
-        {
-            key: 'merge_level',
-            label: 'Status',
-            render: (value) => {
-                if (!value) return <Badge variant="glass" size="sm">Unknown</Badge>;
-                if (value.includes('NO_MERGE')) return <Badge variant="glass-info" size="sm">Single</Badge>;
-                if (value.includes('MERGED')) return <Badge variant="glass-success" size="sm">Merged</Badge>;
-                if (value.includes('LOW_CONFIDENCE')) return <Badge variant="glass-warning" size="sm">Low Conf</Badge>;
-                return <Badge variant="glass" size="sm">{value}</Badge>;
-            }
-        },
-    ];
 
     if (loading) {
         return (
@@ -193,10 +158,11 @@ const Dashboard = () => {
                     <div className="flex flex-wrap gap-3 pt-2">
                         <Button
                             variant="primary"
-                            icon={Download}
+                            icon={exporting ? RefreshCw : Download}
                             onClick={handleExport}
+                            disabled={exporting}
                         >
-                            Export Data
+                            {exporting ? 'Exporting...' : 'Export Data'}
                         </Button>
                         <button
                             onClick={fetchData}
@@ -335,49 +301,36 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Quick Actions Card */}
+                {/* System Management Card */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                            <Users size={18} className="text-purple-500" />
-                            <span className="font-semibold text-gray-900">Quick Actions</span>
+                            <RefreshCw size={18} className="text-orange-500" />
+                            <span className="font-semibold text-gray-900">System Management</span>
                         </div>
-                        <Badge variant="glass-pink" size="sm">Tools</Badge>
+                        <Badge variant="glass-warning" size="sm">Admin</Badge>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <p className="text-xs text-gray-500 mb-2">Perform a complete reset to clear all data and AI memory for a 100% fresh start.</p>
+                            <button
+                                onClick={() => handleResetDatabase(true)}
+                                className="w-full py-2 px-4 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg text-sm font-medium transition-colors border border-orange-100 flex items-center justify-center gap-2"
+                            >
+                                <Trash2 size={14} /> Full Reset & Clear Cache
+                            </button>
+                        </div>
                         <button
-                            onClick={() => navigate('/upload')}
-                            className="w-full flex justify-between items-center text-sm text-gray-500 hover:text-pink-600 transition-colors"
+                            onClick={() => handleResetDatabase(false)}
+                            className="w-full flex justify-between items-center text-sm text-gray-500 hover:text-red-600 transition-colors px-2"
                         >
-                            <span>Upload Data</span>
-                            <ArrowRight size={14} />
-                        </button>
-                        <button
-                            onClick={() => navigate('/products')}
-                            className="w-full flex justify-between items-center text-sm text-gray-500 hover:text-pink-600 transition-colors"
-                        >
-                            <span>View Products</span>
-                            <ArrowRight size={14} />
-                        </button>
-                        <button
-                            onClick={handleResetDatabase}
-                            className="w-full flex justify-between items-center text-sm text-red-500 hover:text-red-600 transition-colors"
-                        >
-                            <span>Reset Database</span>
-                            <Trash2 size={14} />
+                            <span>Quick Reset (Keep Cache)</span>
+                            <RefreshCw size={14} />
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Recent Products Table */}
-            <Card title="Recent Products" subtitle="Latest processed products">
-                <Table
-                    columns={columns}
-                    data={recentProducts}
-                    onRowClick={(row) => navigate(`/products/${row.merge_id}`)}
-                />
-            </Card>
         </div>
     );
 };
