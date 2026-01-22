@@ -746,7 +746,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             item_name = group_docs[0].get("ITEM")
             norm = norm_map.get(item_name, {})
             
-            # If BRAND field missing, use LLM extracted brand
+            # ✅ FIX: Set BRAND field FIRST before merge_id
             if not doc.get("BRAND"):
                 doc["BRAND"] = norm.get("brand") or "UNKNOWN"
             
@@ -756,14 +756,15 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             doc["normalized_item"] = norm.get("base_item")
             doc["llm_confidence_min"] = norm.get("confidence", 0)
 
+            # Generate merge_id AFTER BRAND is set
+            doc["merge_id"] = doc.get("merge_id") or f"{doc['BRAND']}_{uuid.uuid4().hex}"
+
             extend_merge_metadata(
                 base=doc,
                 group_docs=[doc],
                 merge_rule="NO MERGE | SINGLE ITEM",
                 merge_level="NO_MERGE_SINGLE_ITEM"
             )
-
-            doc["merge_id"] = doc.get("merge_id") or f"{doc['BRAND']}_{uuid.uuid4().hex}"
             
             doc["sheet_name"] = "wersel_match"
 
@@ -803,15 +804,16 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 except (ValueError, TypeError):
                     pass
         
-        base["merge_id"] = base.get("merge_id") or f"{base['BRAND']}_{uuid.uuid4().hex}"
-        
         # Get norm from first item
         item_name = group_docs[0].get("ITEM")
         norm = norm_map.get(item_name, {})
         
-        # If BRAND field missing, use LLM extracted brand
+        # ✅ FIX: Set BRAND field FIRST before merge_id
         if not base.get("BRAND"):
             base["BRAND"] = norm.get("brand") or "UNKNOWN"
+        
+        # Generate merge_id AFTER BRAND is set
+        base["merge_id"] = base.get("merge_id") or f"{base['BRAND']}_{uuid.uuid4().hex}"
         
         # Store LLM extracted fields (flavour, size are not duplicates)
         base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
