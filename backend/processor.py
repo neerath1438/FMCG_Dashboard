@@ -834,11 +834,12 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         # Add sheet_name for tracking
         base["sheet_name"] = "wersel_match"
         
-        # Clean up
-        redundant_keys = ["BRAND", "VARIANT", "NRMSIZE"]
+        # Clean up internal fields (Keep BRAND as it is critical for dashboard)
+        redundant_keys = ["VARIANT", "NRMSIZE"] # Removed BRAND from here
         for k in list(base.keys()):
             if k.startswith("_") or k.lower().startswith("unnamed") or k in redundant_keys:
                 base.pop(k)
+
         
         # Add to batch operations
         batch_operations.append(UpdateOne(
