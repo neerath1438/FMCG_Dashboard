@@ -94,7 +94,7 @@ const MergeMetadata = ({ product }) => {
                             <div className="flex-1 bg-white/30 backdrop-blur-sm rounded-full h-2.5 border border-white/20">
                                 <div
                                     className={`h-2.5 rounded-full transition-all duration-500 ${product.llm_confidence_min >= 0.9 ? 'bg-emerald-500' :
-                                            product.llm_confidence_min >= 0.8 ? 'bg-blue-500' : 'bg-amber-500'
+                                        product.llm_confidence_min >= 0.8 ? 'bg-blue-500' : 'bg-amber-500'
                                         }`}
                                     style={{ width: `${product.llm_confidence_min * 100}%` }}
                                 />

@@ -174,6 +174,25 @@ async def process_excel_flow_1(file_contents, request=None):
             df[facts_col] = df[facts_col].fillna(fill_val)
             group_keys.append(facts_col)
 
+        # ✅ NEW: Add Brand, Item (Cleaned), and Flavour to Group Keys to handle shared UPCs
+        # This fulfills Option A: Segmenting distinct products even if UPC is identical.
+        brand_col = col_map.get("BRAND")
+        flavour_col = col_map.get("FLAVOUR") or col_map.get("FLAVOR")
+        
+        # We use a cleaned version of the item name to group similar descriptions together 
+        # while keeping distinct forms (Stick vs Crispy) separate.
+        if item_col:
+            df["_group_item_clean"] = df[item_col].apply(simple_clean_item)
+            group_keys.append("_group_item_clean")
+            
+        if brand_col:
+            df[brand_col] = df[brand_col].fillna(fill_val)
+            group_keys.append(brand_col)
+        
+        if flavour_col:
+            df[flavour_col] = df[flavour_col].fillna(fill_val)
+            group_keys.append(flavour_col)
+
 
         # ✅ ULTRA FAST: Cache groupby result (avoid calling it twice!)
         print(f"[{sheet_name}] Creating groups (this may take a moment for large files)...")
@@ -404,6 +423,14 @@ Use these standardized terms for any raw keywords found:
   - {DBL, DOUBLE, DB} -> DOUBLE
   - {TRP, TRIPLE} -> TRIPLE
 
+- PRODUCT FORMS (IMPORTANT: Keep these distinct):
+  - {BISK, BSC, BISCUIT} -> BISCUIT
+  - {WAF, WFR, WAFER} -> WAFER
+  - {STK, STICK} -> STICK
+  - {ROL, ROLL} -> ROLL
+  - {PCH, POUCH} -> POUCH
+  - {CKI, COOKIE} -> COOKIE
+
 - UOM (Volume/Weight):
   - {320M, 320ML} -> 320ML
   - {1.5L, 1.5LTR, 1500M} -> 1500ML
@@ -429,15 +456,20 @@ Use these standardized terms for any raw keywords found:
    Output: {"brand": "OREO", "flavour": "VANILLA", "size": "133G", "base_item": "OREO VANILLA 133G", "confidence": 1.0}
 2. Input: "ARNOTT'S NYAM NYAM RICE CRISPY 22 GM"
    Output: {"brand": "ARNOTTS", "flavour": "RICE CRISPY", "size": "22G", "base_item": "ARNOTTS NYAM NYAM RICE CRISPY 22G", "confidence": 1.0}
-3. Input: "GLICO CHOCO BANANA 25GM"
-   Output: {"brand": "GLICO", "flavour": "CHOCOLATE BANANA", "size": "25G", "base_item": "GLICO POCKY CHOCOLATE BANANA 25G", "confidence": 1.0}
+3. Input: "MEIJI HELLO PANDA STICK CHOCO 20G"
+   Output: {"brand": "MEIJI", "flavour": "CHOCOLATE", "size": "20G", "product_form": "STICK", "base_item": "MEIJI HELLO PANDA STICK CHOCO 20G", "confidence": 1.0}
+4. Input: "ARNOTT'S NYAM NYAM RICE CRISPY 22 GM"
+   Output: {"brand": "ARNOTTS", "flavour": "RICE CRISPY", "size": "22G", "product_form": "RICE CRISPY", "base_item": "ARNOTTS NYAM NYAM RICE CRISPY 22G", "confidence": 1.0}
+5. Input: "ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM"
+   Output: {"brand": "ARNOTTS", "flavour": "CHOCOLATE", "size": "22.5G", "product_form": "STICK", "base_item": "ARNOTTS NYAM NYAM FANTASY STICK 22.5G", "confidence": 1.0}
 
 Rules:
-1. Identify BRAND, FLAVOUR, SIZE using the mapping table above.
-2. Remove marketing / promo / campaign words (PROMO, PRM, NP, FOC, NEW, OFFER, LIMITED, BEST VALUE, etc.).
-3. If a term is not in the table, try to find its English equivalent or keep it as is if it's a specific product name.
-4. Do NOT merge different flavours or sizes unless they are logically identical after standardization.
-5. Output STRICT JSON only.
+1. Identify BRAND, FLAVOUR, PRODUCT FORM, and SIZE strictly.
+2. The "base_item" MUST include the Product Form (e.g., STICK, WAFER, BISCUIT) if present in the raw text.
+3. Remove marketing / promo / campaign words (PROMO, PRM, NP, FOC, NEW, OFFER, LIMITED, BEST VALUE, etc.).
+4. Do NOT merge different flavours or different product forms (e.g., Biscuit vs Stick).
+5. Even if the items share a barcode (UPC), they MUST remain separate if their FORM or FLAVOUR is different.
+6. Output STRICT JSON only.
 
 """
     
@@ -448,8 +480,9 @@ Return JSON only:
 {{
   "brand": "Standardized Brand Name",
   "flavour": "Standardized Flavour Name",
+  "product_form": "Standardized Form (e.g., STICK, WAFER, BISCUIT, RICE CRISPY, ROLL)",
   "size": "Standardized Size (e.g., 320ML, 500G)",
-  "base_item": "Standardized Generic Name",
+  "base_item": "Standardized Full Generic Name (Include weight)",
   "removed_marketing_terms": ["list", "of", "removed", "terms"],
   "confidence": 0.0 to 1.0
 }}
@@ -530,7 +563,7 @@ def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
     
     base["merged_upcs"] = list(dict.fromkeys(
         base.get("merged_upcs", []) +
-        [d.get("UPC") for d in group_docs if d.get("UPC")]
+        [str(d.get("UPC")) for d in group_docs if d.get("UPC")]
     ))
 
     
@@ -673,8 +706,10 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         
         if norm.get("confidence", 0) >= LLM_CONFIDENCE_THRESHOLD:
             # HIGH CONFIDENCE: Group by AI-standardized attributes + Facts
+            # ✅ FIX: Use 'product_form' instead of 'base_item' to allow size-tolerance merging (Option A)
+            # This ensures items with different weights (18g, 22g) but same form group together.
             pre_group_key = (
-                f"{norm.get('brand')}|{norm.get('flavour')}|"
+                f"{norm.get('brand')}|{norm.get('product_form', 'UNKNOWN')}|{norm.get('flavour')}|"
                 f"{market_val}|{mpack_val}|{facts_val}"
             )
         else:
@@ -752,6 +787,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             
             # Store LLM extracted fields (flavour, size are not duplicates)
             doc["flavour"] = norm.get("flavour")
+            doc["product_form"] = norm.get("product_form")
             doc["size"] = norm.get("size")
             doc["normalized_item"] = norm.get("base_item")
             doc["llm_confidence_min"] = norm.get("confidence", 0)
@@ -817,6 +853,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         
         # Store LLM extracted fields (flavour, size are not duplicates)
         base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
+        base["product_form"] = norm.get("product_form") or "UNKNOWN"
         base["size"] = norm.get("size") or base.get("NRMSIZE", "")
         base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")
         base["llm_confidence_min"] = min(norm_map.get(d.get("ITEM"), {}).get("confidence", 0) for d in group_docs)
