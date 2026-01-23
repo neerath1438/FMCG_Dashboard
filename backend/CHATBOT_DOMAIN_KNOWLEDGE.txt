@@ -16,8 +16,15 @@
   - Use `BRAND` (All caps) for brand searches.
   - Use `Markets` (Starts with M) for region searches.
   - Use `Facts` (Starts with F) for metric searches.
+  - Use `product_form` (Lower case) for forms like STICK, WAFER, BISCUIT.
+  - Use `llm_confidence_min` (Lower case) for AI accuracy scores (0.0 to 1.0).
 - **Market Names**: Must match exactly: 'Pen Malaysia', 'EM', 'Total 7-Eleven'.
 - **Metrics**: Must match exactly: 'Sales Value', 'Sales Units', etc.
+
+### 🧪 PRODUCT FORM & CONFIDENCE:
+- **Low Confidence Items**: Defined as items where `llm_confidence_min < 0.8`.
+- **Product Forms**: STICK, WAFER, BISCUIT, COOKIE, ROLL, RICE CRISPY. 
+- If a user asks for "Nyam Nyam splits", they are likely asking about differences in `product_form` (Stick vs Rice Crispy).
 
 ### 🤝 MERGING LOGIC:
 - We merge products across UPCs if Brand + Flavor + Size match.

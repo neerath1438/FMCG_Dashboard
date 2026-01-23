@@ -115,6 +115,8 @@ Database: {total_count} products (MongoDB).
 - `Markets`: (e.g., 'Pen Malaysia', 'EM', 'Total 7-Eleven')
 - `Facts`: (e.g., 'Sales Value', 'Sales Units', 'Weighted Distribution - Reach - Product Segment')
 - `ITEM`: Product descriptions.
+- `product_form`: Category (e.g., 'STICK', 'WAFER', 'BISCUIT').
+- `llm_confidence_min`: Score from 0.0 to 1.0. Used for "low confidence" queries (threshold < 0.8).
 - `MAT Nov'24`: Numeric value for sorting (Sales).
 - `merged_from_docs`: Number of items combined into this master record.
 - `merge_items`: Array of original product names.
@@ -165,11 +167,14 @@ Database: {total_count} products (MongoDB).
         sort_list = result.get("sort", [])
         explanation = result.get("explanation", "")
         
-        # Step B: Fetch Data with Sort
+        # Step B: Fetch Total Count and Data Sample
+        total_found = master_coll.count_documents(query)
+        
         mongo_cursor = master_coll.find(query)
         if sort_list:
             mongo_cursor = mongo_cursor.sort(sort_list)
         
+        # We only fetch a sample for the AI to "see", but use total_found for the actual number
         data = list(mongo_cursor.limit(limit))
         for doc in data: doc.pop("_id", None)
         
@@ -178,7 +183,8 @@ Database: {total_count} products (MongoDB).
 
         answer_prompt = f"""Question: {question}
 Explanation: {explanation}
-Found: {len(data)} items.
+Total Found in Database: {total_found}
+Data Sample Size: {len(data)}
 Data (Sample):
 {data_str}
 
@@ -203,7 +209,7 @@ Data (Sample):
             "answer": answer_text,
             "data": data,
             "query_used": query,
-            "result_count": len(data),
+            "result_count": total_found,
             "explanation": explanation
         }
         
