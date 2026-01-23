@@ -260,8 +260,9 @@ async def get_summary():
     unique_upcs_count = len([u for u in unique_upcs if u])
     
     # Get unique Brands count from RAW_DATA (original file - to verify AI accuracy)
+    # Filter out null, empty strings, and whitespace-only brands
     unique_brands = raw_coll.distinct("BRAND")
-    unique_brands_count = len([b for b in unique_brands if b])
+    unique_brands_count = len([b for b in unique_brands if b and str(b).strip()])
     
     # Get detailed statistics from MASTER_STOCK for other metrics
     pipeline = [
@@ -363,7 +364,8 @@ async def get_products(limit: int = 100, skip: int = 0, search: str = None, bran
 async def get_all_brands():
     """Get list of all unique brands in MASTER_STOCK"""
     coll = get_collection(MASTER_STOCK_COL)
-    brands = sorted([b for b in coll.distinct("BRAND") if b])
+    # Filter out null, empty, or whitespace-only brands for the dropdown/list
+    brands = sorted([b for b in coll.distinct("BRAND") if b and str(b).strip()])
     return {"brands": brands}
 
 @app.get("/dashboard/analytics-data")
@@ -374,7 +376,8 @@ async def get_analytics_data():
     # 1. Base Stats
     raw_coll = get_collection(RAW_DATA_COL)
     total_products = master_coll.count_documents({})
-    unique_brands_count = len([b for b in master_coll.distinct("BRAND") if b])
+    # Filter out null, empty, or whitespace-only brands
+    unique_brands_count = len([b for b in master_coll.distinct("BRAND") if b and str(b).strip()])
     
     raw_data_count = raw_coll.count_documents({})
     merged_products_count = raw_data_count - total_products if raw_data_count > total_products else 0
