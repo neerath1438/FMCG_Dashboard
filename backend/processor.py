@@ -19,7 +19,7 @@ from pymongo import UpdateOne
 # No direct OpenAI client needed here
 
 # Configuration
-LLM_CONFIDENCE_THRESHOLD = 0.80
+LLM_CONFIDENCE_THRESHOLD = 0.92  # Raised from 0.80 for production-grade safety
 OPENAI_MODEL = "gpt-4o"
 
 
@@ -424,12 +424,22 @@ Use these standardized terms for any raw keywords found:
   - {TRP, TRIPLE} -> TRIPLE
 
 - PRODUCT FORMS (IMPORTANT: Keep these distinct):
-  - {BISK, BSC, BISCUIT} -> BISCUIT
+  - {BISK, BSC, BISCUIT, CKI, COOKIE} -> BISCUIT / COOKIE
   - {WAF, WFR, WAFER} -> WAFER
-  - {STK, STICK} -> STICK
+  - {STK, STICK, PRETZ, TOPPO, PEPERO, POCKY} -> STICK
   - {ROL, ROLL} -> ROLL
   - {PCH, POUCH} -> POUCH
-  - {CKI, COOKIE} -> COOKIE
+  - {SNK, SNACK, CAPLICO, CHOCOROOM} -> SNACK / CHOCOROOM
+  - {DONUT, DNNT} -> DONUT
+  - {HIPPO, TRONKY} -> Keep specific form (HIPPO / TRONKY)
+  - {FINGER, ROUND, TRIANGLE} -> Keep shape as Form
+  - {MARIE, MRE} -> MARIE
+  - {CRACKER, CRK, CRACKERS, CRACK} -> CRACKER
+  - {YANYAN, YAN YAN} -> YAN YAN
+  - {HELLOPANDA, HELLO PANDA} -> HELLO PANDA
+  - {LUCKY STICK} -> LUCKY STICK
+  - {ASSORTED, ASST, TIN, BOX, PARTY, SELECTION} -> ASSORTED
+  - {BEAN, BUTTER, SUGAR, CREAM, VEGE, VEGETABLE} -> Use as Sub-variant / Flavour
 
 - UOM (Volume/Weight):
   - {320M, 320ML} -> 320ML
@@ -451,25 +461,43 @@ Use these standardized terms for any raw keywords found:
   - {VP, V.PACK} -> MULTIPACK
   - {RTE} -> READY TO EAT
 
+### 🍯 SUGAR & DIETARY FLAGS:
+- {SF, NO SUGAR, WITHOUT SUGAR, S.FREE, ZERO SUGAR} -> SUGAR FREE
+- {NORMAL, REGULAR, ORIGINAL} -> NORMAL
+
 ### Few-Shot Examples for Accuracy:
 1. Input: "OREO VNL 133G"
-   Output: {"brand": "OREO", "flavour": "VANILLA", "size": "133G", "base_item": "OREO VANILLA 133G", "confidence": 1.0}
-2. Input: "ARNOTT'S NYAM NYAM RICE CRISPY 22 GM"
-   Output: {"brand": "ARNOTTS", "flavour": "RICE CRISPY", "size": "22G", "base_item": "ARNOTTS NYAM NYAM RICE CRISPY 22G", "confidence": 1.0}
-3. Input: "MEIJI HELLO PANDA STICK CHOCO 20G"
-   Output: {"brand": "MEIJI", "flavour": "CHOCOLATE", "size": "20G", "product_form": "STICK", "base_item": "MEIJI HELLO PANDA STICK CHOCO 20G", "confidence": 1.0}
-4. Input: "ARNOTT'S NYAM NYAM RICE CRISPY 22 GM"
-   Output: {"brand": "ARNOTTS", "flavour": "RICE CRISPY", "size": "22G", "product_form": "RICE CRISPY", "base_item": "ARNOTTS NYAM NYAM RICE CRISPY 22G", "confidence": 1.0}
-5. Input: "ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM"
-   Output: {"brand": "ARNOTTS", "flavour": "CHOCOLATE", "size": "22.5G", "product_form": "STICK", "base_item": "ARNOTTS NYAM NYAM FANTASY STICK 22.5G", "confidence": 1.0}
+   Output: {"brand": "OREO", "flavour": "VANILLA", "size": "133G", "product_form": "BISCUIT", "is_sugar_free": false, "base_item": "OREO VANILLA BISCUIT 133G", "confidence": 1.0}
+2. Input: "GLICO PRETZ SALTED 31G"
+   Output: {"brand": "GLICO", "flavour": "SALTED", "size": "31G", "product_form": "STICK", "is_sugar_free": false, "base_item": "GLICO PRETZ STICK SALTED 31G", "confidence": 1.0}
+3. Input: "GLICO CAPLICO STRAWBERRY 30G"
+   Output: {"brand": "GLICO", "flavour": "STRAWBERRY", "size": "30G", "product_form": "SNACK", "is_sugar_free": false, "base_item": "GLICO CAPLICO SNACK STRAWBERRY 30G", "confidence": 1.0}
+4. Input: "KINDER HAPPY HIPPO 20.7G"
+   Output: {"brand": "KINDER", "flavour": "HAZELNUT", "size": "20.7G", "product_form": "HIPPO", "is_sugar_free": false, "base_item": "KINDER HAPPY HIPPO 20.7G", "confidence": 1.0}
+5. Input: "WALKERS SHORTBREAD FINGERS 150G"
+   Output: {"brand": "WALKERS", "flavour": "ORIGINAL", "size": "150G", "product_form": "FINGER", "is_sugar_free": false, "base_item": "WALKERS SHORTBREAD FINGER 150G", "confidence": 1.0}
+6. Input: "MARYLAND CHOC CHIP HAZELNUT 200G"
+   Output: {"brand": "MARYLAND", "flavour": "CHOCOLATE CHIP HAZELNUT", "size": "200G", "product_form": "COOKIE", "is_sugar_free": false, "base_item": "MARYLAND COOKIE CHOC CHIP HAZELNUT 200G", "confidence": 1.0}
+7. Input: "VFOODS DONUT STRAWBERRY 100G"
+   Output: {"brand": "VFOODS", "flavour": "STRAWBERRY", "size": "100G", "product_form": "DONUT", "is_sugar_free": false, "base_item": "VFOODS DONUT STRAWBERRY 100G", "confidence": 1.0}
+8. Input: "MEIJI YAN YAN CHOCO 50G"
+   Output: {"brand": "MEIJI", "product_line": "YAN YAN", "flavour": "CHOCOLATE", "size": "50G", "product_form": "SNACK", "is_sugar_free": false, "base_item": "MEIJI YAN YAN SNACK CHOCOLATE 50G", "confidence": 1.0}
+9. Input: "MEIJI HELLO PANDA CHOCO 50G"
+   Output: {"brand": "MEIJI", "product_line": "HELLO PANDA", "flavour": "CHOCOLATE", "size": "50G", "product_form": "SNACK", "is_sugar_free": false, "base_item": "MEIJI HELLO PANDA SNACK CHOCOLATE 50G", "confidence": 1.0}
 
 Rules:
 1. Identify BRAND, FLAVOUR, PRODUCT FORM, and SIZE strictly.
-2. The "base_item" MUST include the Product Form (e.g., STICK, WAFER, BISCUIT) if present in the raw text.
-3. Remove marketing / promo / campaign words (PROMO, PRM, NP, FOC, NEW, OFFER, LIMITED, BEST VALUE, etc.).
-4. Do NOT merge different flavours or different product forms (e.g., Biscuit vs Stick).
-5. Even if the items share a barcode (UPC), they MUST remain separate if their FORM or FLAVOUR is different.
-6. Output STRICT JSON only.
+2. The "base_item" MUST include the Product Form (e.g., STICK, WAFER, BISCUIT, SNACK, DONUT) if present in the raw text.
+3. FLAVOUR STRICTNESS: Every distinct flavour change (CHOCOLATE vs PEANUT vs HAZELNUT vs VANILLA) MUST result in a different flavour field. Do Not generalize.
+4. PRODUCT FORM/TYPE STRICTNESS: Treat STICK, WAFER, ROLL, BISCUIT, SNACK, DONUT, HIPPO, TRONKY, MARIE, and CRACKER as distinct forms.
+5. FLAVOUR/VARIANT STRICTNESS: "CREAM CRACKER" and "SUGAR CRACKER" are DIFFERENT. "CHOCOLATE BEAN" and "CHOCOLATE BUTTER" are DIFFERENT. "VEGETABLE" and "SUGAR" are DIFFERENT.
+6. ASSORTED PRODUCTS: Different Assorted names (e.g., "Prime Selection" vs "Party Biscuit") are DIFFERENT. Do NOT merge them.
+7. NESTED FLAVOURS: Always keep the most specific flavour description. If an item says "CHOCOLATE BEAN", the flavour is "CHOCOLATE BEAN", not "CHOCOLATE".
+8. PRODUCT LINE / SUB-BRAND STRICTNESS (CRITICAL): Items with different model names are DIFFERENT. Examples: "YAN YAN" vs "HELLO PANDA", "NEXTAR" vs "MALKIST", "ZOO" vs "ABC", "TOPMIX" vs "FUNMIX", "LINGO" vs "OCHESTRA". Extract these into `product_line`. If a sub-brand name is found, it is MANDATORY to put it in `product_line`.
+9. VARIANT STRICTNESS (CRITICAL): Keywords like "DIPPED", "DOUBLE STUF", "THIN", "CRUNCHIES", "SNOWY", "TRIPLE", "RAINBOW", "GLUTEN FREE", and "ORGANIC" are NOT branding terms; they are distinctive variants. You MUST extract these into `product_line` or `flavour`. Items with these keywords MUST never merge with regular versions.
+10. FLAVOUR GRANULARITY: Specific rice types like "BERAS KUNING" vs "BERAS PUTIH" are DIFFERENT flavours.
+11. Remove generic marketing terms (e.g., "Family Pack", "MPACK") but PROTECT product identity words.
+12. Output STRICT JSON only.
 
 """
     
@@ -478,9 +506,11 @@ ITEM DESCRIPTION: "{item}"
 
 Return JSON only:
 {{
-  "brand": "Standardized Brand Name",
-  "flavour": "Standardized Flavour Name",
+  "brand": "Standardized Brand Name (e.g., NABATI, MEIJI)",
+  "product_line": "Specific Sub-Brand or Line (e.g., NEXTAR, MALKIST, YAN YAN, HELLO PANDA, LINGO, OCHESTRA, TOPMIX, FUNMIX)",
+  "flavour": "Standardized Flavour Name (e.g., SWEET & SOUR STRAWBERRY)",
   "product_form": "Standardized Form (e.g., STICK, WAFER, BISCUIT, RICE CRISPY, ROLL)",
+  "is_sugar_free": boolean,
   "size": "Standardized Size (e.g., 320ML, 500G)",
   "base_item": "Standardized Full Generic Name (Include weight)",
   "removed_marketing_terms": ["list", "of", "removed", "terms"],
@@ -588,8 +618,8 @@ def simple_clean_item(name):
     """Fallback cleaner for when AI fails. Extracts and sorts unique keywords."""
     if not name: return ""
     s = str(name).upper()
-    # Remove noise
-    for word in ["BRAND", "FLAVOUR", "FLV", "PRODUCT", "PACK", "ITEM", "X1", "POCKY", "GLICO", "OREO"]:
+    # Remove very common noise words only
+    for word in ["ITEM", "PACK", "FLAVOUR", "FLV"]:
         s = s.replace(word, " ")
     # Take alphanumeric words only and sort them
     words = sorted(list(set(re.findall(r'[A-Z0-9]+', s))))
@@ -704,19 +734,45 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         mpack_val = get_val(d, ["MPACK", "PACK"])
         facts_val = get_val(d, ["FACTS", "FACT"])
         
+        # 2. CONSTRUCT PRE-GROUP KEY
+        # FIX 1: Use ONLY LLM-Standardized Brand (Never trust Excel Brand for grouping)
+        llm_brand = str(norm.get("brand", "UNKNOWN")).upper()
+        llm_form = str(norm.get("product_form", "UNKNOWN")).upper()
+        llm_flavour = str(norm.get("flavour", "UNKNOWN")).upper()
+        
         if norm.get("confidence", 0) >= LLM_CONFIDENCE_THRESHOLD:
-            # HIGH CONFIDENCE: Group by AI-standardized attributes + Facts
-            # ✅ FIX: Use 'product_form' instead of 'base_item' to allow size-tolerance merging (Option A)
-            # This ensures items with different weights (18g, 22g) but same form group together.
-            pre_group_key = (
-                f"{norm.get('brand')}|{norm.get('product_form', 'UNKNOWN')}|{norm.get('flavour')}|"
-                f"{market_val}|{mpack_val}|{facts_val}"
-            )
+            # HIGH CONFIDENCE: Use LLM Attributes
+            
+            # FIX 3: ASSORTED Protection (Keep different Assorted names separate)
+            assorted_guard = ""
+            if llm_form == "ASSORTED":
+                # Use a cleaned version of the item name to prevent "TOPMIX" vs "FUNMIX" merging
+                assorted_guard = f"|{simple_clean_item(item)}"
+            
+            is_sf = "SF" if norm.get("is_sugar_free") else "REG"
+            # STEP 2 HARD RULE: Family Token Gatekeeper
+            llm_line = str(norm.get("product_line", "")).strip().upper()
+            
+            # 🚨 HARD FAMILY GUARD (MANDATORY)
+            # If product_line is missing, downgrade to LOW_CONF to prevent wrong merges
+            if not llm_line or llm_line in ["NONE", "UNKNOWN"]:
+                print(f"⚠️  FAMILY MISSING → LOW_CONF :: {item}")
+                clean_sig = simple_clean_item(item)
+                pre_group_key = (
+                    f"LOW_CONF|{llm_brand}|{clean_sig}|"
+                    f"{market_val}|{mpack_val}|{facts_val}"
+                )
+            else:
+                pre_group_key = (
+                    f"HI_CONF|{llm_brand}|{llm_line}|{llm_form}|{llm_flavour}|{is_sf}|"
+                    f"{market_val}|{mpack_val}|{facts_val}{assorted_guard}"
+                )
         else:
-            # LOW CONFIDENCE: Fallback to Cleaned keywords + Facts
-            clean_item = simple_clean_item(item)
+            # FIX 2: Safer LOW_CONF Fallback (Do not blindly merge)
+            # We use the cleaned item name as a unique signature to keep questionable items separate
+            clean_sig = simple_clean_item(item)
             pre_group_key = (
-                f"LOW_CONF|{clean_item}|"
+                f"LOW_CONF|{llm_brand}|{clean_sig}|"
                 f"{market_val}|{mpack_val}|{facts_val}"
             )
 
@@ -760,63 +816,79 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     batch_operations = []
     
     # Process Groups
-    for group_docs in final_groups_list:
-        # Sort group docs by 'Facts' priority: prefer 'Sales Value' as the descriptive base
-        def facts_priority(doc):
-            f = str(doc.get("Facts", doc.get("FACTS", ""))).upper()
-            if "VALUE" in f: return 0
-            if "UNIT" in f: return 1
-            return 2
+    for cluster_docs in final_groups_list:
+        # 🚨 POST-MERGE AUDIT (HARD RULE 2.0)
+        # Block if multiple distinct product lines have somehow leaked into the same group
+        valid_subgroups = [cluster_docs] # Default is one group
         
-        group_docs.sort(key=facts_priority)
+        if len(cluster_docs) > 1:
+            families_map = {} # fam -> list of docs
+            for d in cluster_docs:
+                norm = norm_map.get(d.get("ITEM"), {})
+                fam = str(norm.get("product_line", "")).strip().upper()
+                if not fam or fam in ["NONE", "UNKNOWN"]:
+                    fam = f"UNIQUE_{simple_clean_item(d.get('ITEM'))}"
+                families_map.setdefault(fam, []).append(d)
+            
+            if len(families_map) > 1:
+                print(f"⚠️ AUDIT ALERT: Found {len(families_map)} families in one cluster {list(families_map.keys())}. Splitting.")
+                valid_subgroups = list(families_map.values())
 
-        
-        # Single item - no merge
-        if len(group_docs) == 1:
-            doc = copy.deepcopy(group_docs[0])
-            doc.pop("_id", None)
-            doc.pop("_norm", None)
+        for group_docs in valid_subgroups:
+            # Sort group docs by 'Facts' priority: prefer 'Sales Value' as the descriptive base
+            def facts_priority(doc):
+                f = str(doc.get("Facts", doc.get("FACTS", ""))).upper()
+                if "VALUE" in f: return 0
+                if "UNIT" in f: return 1
+                return 2
             
-            # Get norm from the first item
-            item_name = group_docs[0].get("ITEM")
-            norm = norm_map.get(item_name, {})
-            
-            # ✅ FIX: Set BRAND field FIRST before merge_id
-            if not doc.get("BRAND"):
-                doc["BRAND"] = norm.get("brand") or "UNKNOWN"
-            
-            # Store LLM extracted fields (flavour, size are not duplicates)
-            doc["flavour"] = norm.get("flavour")
-            doc["product_form"] = norm.get("product_form")
-            doc["size"] = norm.get("size")
-            doc["normalized_item"] = norm.get("base_item")
-            doc["llm_confidence_min"] = norm.get("confidence", 0)
+            group_docs.sort(key=facts_priority)
 
-            # Generate merge_id AFTER BRAND is set
-            doc["merge_id"] = doc.get("merge_id") or f"{doc['BRAND']}_{uuid.uuid4().hex}"
+            # Single item - no merge
+            if len(group_docs) == 1:
+                doc = copy.deepcopy(group_docs[0])
+                doc.pop("_id", None)
+                doc.pop("_norm", None)
+                
+                # Get norm from the first item
+                item_name = group_docs[0].get("ITEM")
+                norm = norm_map.get(item_name, {})
+                
+                # ✅ FIX: Set BRAND field FIRST before merge_id
+                if not doc.get("BRAND"):
+                    doc["BRAND"] = norm.get("brand") or "UNKNOWN"
+                
+                # Store LLM extracted fields (flavour, size are not duplicates)
+                doc["flavour"] = norm.get("flavour")
+                doc["product_form"] = norm.get("product_form")
+                doc["size"] = norm.get("size")
+                doc["normalized_item"] = norm.get("base_item")
+                doc["llm_confidence_min"] = norm.get("confidence", 0)
 
-            extend_merge_metadata(
-                base=doc,
-                group_docs=[doc],
-                merge_rule="NO MERGE | SINGLE ITEM",
-                merge_level="NO_MERGE_SINGLE_ITEM"
-            )
-            
-            doc["sheet_name"] = "wersel_match"
+                # Generate merge_id AFTER BRAND is set
+                doc["merge_id"] = doc.get("merge_id") or f"{doc['BRAND']}_{uuid.uuid4().hex}"
 
-            
-            # Clean up internal fields
-            for k in list(doc.keys()):
-                if k.startswith("_") or k.lower().startswith("unnamed"):
-                    doc.pop(k)
-            
-            # Add to batch operations
-            batch_operations.append(UpdateOne(
-                {"merge_id": doc["merge_id"], "sheet_name": doc["sheet_name"]},
-                {"$set": doc},
-                upsert=True
-            ))
-            continue
+                extend_merge_metadata(
+                    base=doc,
+                    group_docs=[doc],
+                    merge_rule="NO MERGE | SINGLE ITEM",
+                    merge_level="NO_MERGE_SINGLE_ITEM"
+                )
+                
+                doc["sheet_name"] = "wersel_match"
+                
+                # Clean up internal fields
+                for k in list(doc.keys()):
+                    if k.startswith("_") or k.lower().startswith("unnamed"):
+                        doc.pop(k)
+                
+                # Add to batch operations
+                batch_operations.append(UpdateOne(
+                    {"merge_id": doc["merge_id"], "sheet_name": doc["sheet_name"]},
+                    {"$set": doc},
+                    upsert=True
+                ))
+                continue
 
         
         # Merge multiple items

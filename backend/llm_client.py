@@ -160,20 +160,34 @@ class OpenAIOnlyClient:
         if not self.client:
             return '{}'
         
-        try:
-            resp = self.client.chat.completions.create(
-                model=self.deployment,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            return resp.choices[0].message.content
-        except Exception as e:
-            print(f"OpenAI Error: {e}")
-            return '{}'
+        max_retries = 5
+        base_delay = 1  # Start with 1 second delay
+        
+        for attempt in range(max_retries):
+            try:
+                resp = self.client.chat.completions.create(
+                    model=self.deployment,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message}
+                    ],
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+                return resp.choices[0].message.content
+            except Exception as e:
+                error_msg = str(e)
+                if "429" in error_msg or "RateLimitReached" in error_msg:
+                    delay = base_delay * (2 ** attempt)
+                    print(f"⚠️ Rate limit hit (429) for '{user_message[:30]}...'. Retrying in {delay}s (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(delay)
+                    continue
+                
+                print(f"OpenAI Error: {e}")
+                return '{}'
+        
+        print(f"❌ Failed after {max_retries} attempts due to rate limits.")
+        return '{}'
 
 
 # Singleton instances
