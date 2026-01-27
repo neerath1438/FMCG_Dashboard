@@ -27,9 +27,10 @@ class LLMClient:
             from openai import AzureOpenAI
             self.azure_openai_client = AzureOpenAI(
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),  # SDK expects AZURE_OPENAI_API_KEY
-                api_version="2024-02-01",
+                api_version="2025-01-01-preview",
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
             )
+
             self.azure_openai_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
             self.has_azure_openai = True
         except Exception as e:
@@ -147,7 +148,7 @@ class OpenAIOnlyClient:
             from openai import AzureOpenAI
             self.client = AzureOpenAI(
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                api_version="2024-02-01",
+                api_version="2025-01-01-preview",
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
             )
             self.deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
@@ -178,8 +179,10 @@ class OpenAIOnlyClient:
             except Exception as e:
                 error_msg = str(e)
                 if "429" in error_msg or "RateLimitReached" in error_msg:
-                    delay = base_delay * (2 ** attempt)
-                    print(f"⚠️ Rate limit hit (429) for '{user_message[:30]}...'. Retrying in {delay}s (Attempt {attempt+1}/{max_retries})")
+                    import random
+                    jitter = random.uniform(0.5, 1.5)
+                    delay = (base_delay * (2 ** attempt)) * jitter
+                    print(f"⚠️ Rate limit hit (429) for '{user_message[:30]}...'. Retrying in {delay:.2f}s (Attempt {attempt+1}/{max_retries})")
                     time.sleep(delay)
                     continue
                 

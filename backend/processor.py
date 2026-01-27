@@ -648,6 +648,19 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
 
     unique_items = list(set([d.get("ITEM") for d in docs if d.get("ITEM")]))
     
+    # ✅ FIX: Map original item to context-aware item (Prepend Brand if missing)
+    # This helps LLM identify Family (e.g. "POCKY") even if missing in description
+    item_to_context = {}
+    for d in docs:
+        it = d.get("ITEM")
+        if it not in item_to_context:
+            br = str(d.get("BRAND", "")).strip()
+            # Only prepend if brand is not already in the item description
+            if br and br.upper() not in it.upper():
+                item_to_context[it] = f"{br} {it}"
+            else:
+                item_to_context[it] = it
+    
     # ✅ Optimization: Group unique items by their "Clean Keys" to reduce redundant LLM calls
     clean_groups = {} # {clean_key: [original_items]}
     for item in unique_items:
@@ -692,15 +705,31 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         end_idx = min((batch_num + 1) * batch_size, len(representative_items))
         batch_reps = representative_items[start_idx:end_idx]
         
+        # ✅ Use context-aware names (with Brand) for LLM
+        batch_context_reps = [item_to_context.get(it, it) for it in batch_reps]
+        
         print(f"Batch {batch_num + 1}/{total_batches}: Calling LLM for {len(batch_reps)} items...")
         
-        with ThreadPoolExecutor(max_workers=50) as executor:
-            results = list(executor.map(normalize_item_llm, batch_reps))
-            for item, res in zip(batch_reps, results):
-                rep_results[item] = res
-        
-        if batch_num < total_batches - 1:
-            await asyncio.sleep(0.5)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            # Create a tracker for completed items in the batch
+            completed = 0
+            future_to_item = {executor.submit(normalize_item_llm, it): it for it in batch_context_reps}
+            
+            from concurrent.futures import as_completed
+            for i, future in enumerate(as_completed(future_to_item)):
+                original_item = batch_reps[batch_context_reps.index(future_to_item[future])]
+                try:
+                    res = future.result()
+                    rep_results[original_item] = res
+                    completed += 1
+                    if completed % 10 == 0 or completed == len(batch_reps):
+                        print(f"   - Progress: {completed}/{len(batch_reps)} items completed in current batch")
+                except Exception as e:
+                    print(f"Error in thread for {original_item}: {e}")
+                    rep_results[original_item] = {}
+            
+            if batch_num < total_batches - 1:
+                await asyncio.sleep(0.5)
 
     # Propagate results back to all original unique items in groups
     for ckey, items in clean_groups.items():
