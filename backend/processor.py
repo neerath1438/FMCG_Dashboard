@@ -811,6 +811,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
 
     print(f"Clusters formed after size tolerance: {len(final_groups_list)}")
 
+
     
     # ✅ BATCH PROCESSING: Prepare batch operations
     batch_operations = []
@@ -890,72 +891,67 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 ))
                 continue
 
-        
-        # Merge multiple items
-        base = copy.deepcopy(group_docs[0])
-        base.pop("_id", None)
-        base.pop("_norm", None)
-        
-        # Sum monthly columns
-        month_cols = [k for k in base if "w/e" in k.lower() or "mat" in k.lower()]
-        for m in month_cols:
-            base[m] = 0.0
-        
-        for d in group_docs:
+            # Merge multiple items
+            base = copy.deepcopy(group_docs[0])
+            base.pop("_id", None)
+            base.pop("_norm", None)
+            
+            # Sum monthly columns
+            month_cols = [k for k in base if "w/e" in k.lower() or "mat" in k.lower()]
             for m in month_cols:
-                val = d.get(m)
-                # Robust conversion to float
-                try:
-                    f_val = float(val)
-                    if not math.isnan(f_val):
-                        base[m] += f_val
-                except (ValueError, TypeError):
-                    pass
-        
-        # Get norm from first item
-        item_name = group_docs[0].get("ITEM")
-        norm = norm_map.get(item_name, {})
-        
-        # ✅ FIX: Set BRAND field FIRST before merge_id
-        if not base.get("BRAND"):
-            base["BRAND"] = norm.get("brand") or "UNKNOWN"
-        
-        # Generate merge_id AFTER BRAND is set
-        base["merge_id"] = base.get("merge_id") or f"{base['BRAND']}_{uuid.uuid4().hex}"
-        
-        # Store LLM extracted fields (flavour, size are not duplicates)
-        base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
-        base["product_form"] = norm.get("product_form") or "UNKNOWN"
-        base["size"] = norm.get("size") or base.get("NRMSIZE", "")
-        base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")
-        base["llm_confidence_min"] = min(norm_map.get(d.get("ITEM"), {}).get("confidence", 0) for d in group_docs)
+                base[m] = 0.0
+            
+            for d in group_docs:
+                for m in month_cols:
+                    val = d.get(m)
+                    # Robust conversion to float
+                    try:
+                        f_val = float(val)
+                        if not math.isnan(f_val):
+                            base[m] += f_val
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Get norm from first item
+            item_name = group_docs[0].get("ITEM")
+            norm = norm_map.get(item_name, {})
+            
+            # ✅ FIX: Set BRAND field FIRST before merge_id
+            if not base.get("BRAND"):
+                base["BRAND"] = norm.get("brand") or "UNKNOWN"
+            
+            # Generate merge_id AFTER BRAND is set
+            base["merge_id"] = base.get("merge_id") or f"{base['BRAND']}_{uuid.uuid4().hex}"
+            
+            # Store LLM extracted fields (flavour, size are not duplicates)
+            base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
+            base["product_form"] = norm.get("product_form") or "UNKNOWN"
+            base["size"] = norm.get("size") or base.get("NRMSIZE", "")
+            base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")
+            base["llm_confidence_min"] = min(norm_map.get(d.get("ITEM"), {}).get("confidence", 0) for d in group_docs)
 
+            extend_merge_metadata(
+                base=base,
+                group_docs=group_docs,
+                merge_rule="BRAND+FLAVOUR+SIZE (LLM) + STRICT KEYS",
+                merge_level="MASTER_PRODUCT_MERGE"
+            )
 
-        
-        extend_merge_metadata(
-            base=base,
-            group_docs=group_docs,
-            merge_rule="BRAND+FLAVOUR+SIZE (LLM) + STRICT KEYS",
-            merge_level="MASTER_PRODUCT_MERGE"
-        )
+            # Add sheet_name for tracking
+            base["sheet_name"] = "wersel_match"
+            
+            # Clean up internal fields (Keep BRAND as it is critical for dashboard)
+            redundant_keys = ["VARIANT", "NRMSIZE"] # Removed BRAND from here
+            for k in list(base.keys()):
+                if k.startswith("_") or k.lower().startswith("unnamed") or k in redundant_keys:
+                    base.pop(k)
 
-        
-        # Add sheet_name for tracking
-        base["sheet_name"] = "wersel_match"
-        
-        # Clean up internal fields (Keep BRAND as it is critical for dashboard)
-        redundant_keys = ["VARIANT", "NRMSIZE"] # Removed BRAND from here
-        for k in list(base.keys()):
-            if k.startswith("_") or k.lower().startswith("unnamed") or k in redundant_keys:
-                base.pop(k)
-
-        
-        # Add to batch operations
-        batch_operations.append(UpdateOne(
-            {"merge_id": base["merge_id"], "sheet_name": base["sheet_name"]},
-            {"$set": base},
-            upsert=True
-        ))
+            # Add to batch operations
+            batch_operations.append(UpdateOne(
+                {"merge_id": base["merge_id"], "sheet_name": base["sheet_name"]},
+                {"$set": base},
+                upsert=True
+            ))
     
     # ✅ BATCH WRITE: Write in batches of 5000 (5x faster than 1000)
     if batch_operations:
