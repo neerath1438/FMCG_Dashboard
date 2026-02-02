@@ -20,7 +20,7 @@ from pymongo import UpdateOne
 
 # Configuration
 LLM_CONFIDENCE_THRESHOLD = 0.92  # Raised from 0.80 for production-grade safety
-OPENAI_MODEL = "gpt-4o"
+OPENAI_MODEL = "gpt-4o-mini"
 
 
 # LLM cache to avoid duplicate API calls
@@ -440,6 +440,8 @@ Use these standardized terms for any raw keywords found:
   - {LUCKY STICK} -> LUCKY STICK
   - {ASSORTED, ASST, TIN, BOX, PARTY, SELECTION} -> ASSORTED
   - {BEAN, BUTTER, SUGAR, CREAM, VEGE, VEGETABLE} -> Use as Sub-variant / Flavour
+  - {DIP DIP, DIPDIP, DIPPING, CUP} -> DIP DIP / CUP (Treat as distinct product form)
+  - {BUBBLE PUFF, BUBBLEPUFF} -> BUBBLE PUFF (Treat as distinct product form)
 
 - UOM (Volume/Weight):
   - {320M, 320ML} -> 320ML
@@ -493,8 +495,8 @@ Rules:
 5. FLAVOUR/VARIANT STRICTNESS: "CREAM CRACKER" and "SUGAR CRACKER" are DIFFERENT. "CHOCOLATE BEAN" and "CHOCOLATE BUTTER" are DIFFERENT. "VEGETABLE" and "SUGAR" are DIFFERENT.
 6. ASSORTED PRODUCTS: Different Assorted names (e.g., "Prime Selection" vs "Party Biscuit") are DIFFERENT. Do NOT merge them.
 7. NESTED FLAVOURS: Always keep the most specific flavour description. If an item says "CHOCOLATE BEAN", the flavour is "CHOCOLATE BEAN", not "CHOCOLATE".
-8. PRODUCT LINE / SUB-BRAND STRICTNESS (CRITICAL): Items with different model names are DIFFERENT. Examples: "YAN YAN" vs "HELLO PANDA", "NEXTAR" vs "MALKIST", "ZOO" vs "ABC", "TOPMIX" vs "FUNMIX", "LINGO" vs "OCHESTRA". Extract these into `product_line`. If a sub-brand name is found, it is MANDATORY to put it in `product_line`.
-9. VARIANT STRICTNESS (CRITICAL): Keywords like "DIPPED", "DOUBLE STUF", "THIN", "CRUNCHIES", "SNOWY", "TRIPLE", "RAINBOW", "GLUTEN FREE", and "ORGANIC" are NOT branding terms; they are distinctive variants. You MUST extract these into `product_line` or `flavour`. Items with these keywords MUST never merge with regular versions.
+8. PRODUCT LINE / SUB-BRAND STRICTNESS (CRITICAL): Items with different model names are DIFFERENT. Examples: "YAN YAN" vs "HELLO PANDA", "DIP DIP" vs "REGULAR", "NEXTAR" vs "MALKIST", "ZOO" vs "ABC", "TOPMIX" vs "FUNMIX", "LINGO" vs "OCHESTRA". Extract these into `product_line`. If a sub-brand name or format like "DIP DIP" or "BUBBLE PUFF" is found, it is MANDATORY to put it in `product_line`.
+9. VARIANT STRICTNESS (CRITICAL): Keywords like "DIPPED", "DOUBLE STUF", "THIN", "CRUNCHIES", "SNOWY", "TRIPLE", "RAINBOW", "GLUTEN FREE", "ORGANIC", "DIP DIP", and "BUBBLE PUFF" are NOT general marketing terms; they are distinctive variants or identities. You MUST extract these into `product_line` or `product_form`. Items with these keywords MUST never merge with regular versions.
 10. FLAVOUR GRANULARITY: Specific rice types like "BERAS KUNING" vs "BERAS PUTIH" are DIFFERENT flavours.
 11. Remove generic marketing terms (e.g., "Family Pack", "MPACK") but PROTECT product identity words.
 12. Output STRICT JSON only.
@@ -689,8 +691,9 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     # ✅ Strategy 2: Pre-load cache from MongoDB
     try:
         cache_coll = get_collection("LLM_CACHE_STORAGE")
-        # Pre-load only for representative items
-        existing_cache = {doc["item"]: doc["result"] for doc in cache_coll.find({"item": {"$in": representative_items}})}
+        # Pre-load only for representative context items
+        context_reps = [item_to_context.get(it, it) for it in representative_items]
+        existing_cache = {doc["item"]: doc["result"] for doc in cache_coll.find({"item": {"$in": context_reps}})}
         llm_cache.update(existing_cache)
         print(f"Pre-loaded {len(existing_cache)} items from persistent cache.")
     except Exception as e:
@@ -706,18 +709,20 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         batch_reps = representative_items[start_idx:end_idx]
         
         # ✅ Use context-aware names (with Brand) for LLM
-        batch_context_reps = [item_to_context.get(it, it) for it in batch_reps]
+        # Map: original_item -> context_item
+        batch_map = {it: item_to_context.get(it, it) for it in batch_reps}
         
         print(f"Batch {batch_num + 1}/{total_batches}: Calling LLM for {len(batch_reps)} items...")
         
         with ThreadPoolExecutor(max_workers=10) as executor:
-            # Create a tracker for completed items in the batch
-            completed = 0
-            future_to_item = {executor.submit(normalize_item_llm, it): it for it in batch_context_reps}
+            # Future -> original_item
+            future_to_orig = {executor.submit(normalize_item_llm, ctx_it): orig_it 
+                              for orig_it, ctx_it in batch_map.items()}
             
             from concurrent.futures import as_completed
-            for i, future in enumerate(as_completed(future_to_item)):
-                original_item = batch_reps[batch_context_reps.index(future_to_item[future])]
+            completed = 0
+            for future in as_completed(future_to_orig):
+                original_item = future_to_orig[future]
                 try:
                     res = future.result()
                     rep_results[original_item] = res
@@ -729,6 +734,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                     rep_results[original_item] = {}
             
             if batch_num < total_batches - 1:
+                print(f"✅ Batch {batch_num + 1} completed. {len(rep_results)} items in results map.")
                 await asyncio.sleep(0.5)
 
     # Propagate results back to all original unique items in groups

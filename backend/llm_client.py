@@ -14,6 +14,9 @@ env_path = current_dir / '.env'
 if not env_path.exists():
     env_path = current_dir.parent / '.env'
 
+if env_path.exists():
+    load_dotenv(env_path)
+
 class LLMClient:
     def __init__(self):
         # Primary: Azure Claude
@@ -27,7 +30,7 @@ class LLMClient:
             from openai import AzureOpenAI
             self.azure_openai_client = AzureOpenAI(
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),  # SDK expects AZURE_OPENAI_API_KEY
-                api_version="2025-01-01-preview",
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview"),
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
             )
 
@@ -84,57 +87,70 @@ class LLMClient:
                         "max_tokens": max_tokens,
                         "temperature": temperature
                     }
-                    response = requests.post(self.azure_endpoint, headers=headers, json=payload, timeout=300)  # 5 minutes for LLM processing
+
+                    response = requests.post(self.azure_endpoint, headers=headers, json=payload, timeout=300)
                     
                     if response.status_code == 200:
                         res_json = response.json()
-                        # Anthropic response format: res['content'][0]['text']
                         return res_json['content'][0]['text']
                     
                     elif response.status_code == 429:
-                        # Rate limit hit - immediately fallback to Azure OpenAI instead of retrying
-                        print(f"⚠️ Azure Claude Rate Limit (429) - Switching to Azure OpenAI fallback...")
-                        break  # Exit the retry loop and go to fallback
+                        print(f"Azure Claude Rate Limit (429) - Switching to Azure OpenAI fallback...")
+                        break 
                     
                     else:
                         print(f"Azure Claude Error: {response.status_code} - {response.text}")
-                        # For other errors, try fallback immediately
                         break
                         
                 except Exception as e:
                     print(f"Azure Claude Exception: {e}")
                     if attempt < max_retries - 1:
                         wait_time = base_wait_time * (2 ** attempt)
-                        print(f"Retrying in {wait_time} seconds...")
+                        print(f"Retrying Claude in {wait_time} seconds...")
                         time.sleep(wait_time)
                         continue
                     else:
-                        # Last retry failed, go to fallback
                         break
 
-
-        # Fallback to Azure OpenAI after all Azure Claude retries exhausted
+        # Fallback to Azure OpenAI after all Azure Claude retries exhausted or 429
         if self.has_azure_openai:
-            try:
-                print("🔄 Using Azure OpenAI fallback...")
-                resp = self.azure_openai_client.chat.completions.create(
-                    model=self.azure_openai_deployment,  # Uses deployment name from env
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_message}
-                    ],
-                    temperature=temperature,
-                    max_tokens=max_tokens
-                )
-                print("✅ Azure OpenAI fallback successful")
-                return resp.choices[0].message.content
-            except Exception as e:
-                print(f"❌ Azure OpenAI Error: {e}")
+            print("Using Azure OpenAI fallback...")
+            # Reuse logic from OpenAIOnlyClient for the fallback
+            fb_retries = 5
+            fb_base_delay = 2
+            for fb_attempt in range(fb_retries):
+                try:
+                    resp = self.azure_openai_client.chat.completions.create(
+                        model=self.azure_openai_deployment,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_message}
+                        ],
+                        temperature=temperature,
+                        max_tokens=max_tokens
+                    )
+                    print("Azure OpenAI fallback successful")
+                    return resp.choices[0].message.content
+                except Exception as e:
+                    error_msg = str(e)
+                    if "429" in error_msg or "RateLimitReached" in error_msg:
+                        retry_after = self._parse_retry_after(error_msg)
+                        if retry_after:
+                            delay = retry_after + 1.5
+                        else:
+                            import random
+                            delay = (fb_base_delay * (2 ** fb_attempt)) * random.uniform(0.5, 1.5)
+                        
+                        print(f"Fallback Rate Limit (429). Waiting {delay:.2f}s (Attempt {fb_attempt+1}/{fb_retries})")
+                        delay = min(delay, 60) # ✅ Cap delay to 60s
+                        time.sleep(delay)
+                        continue
+                    
+                    print(f"❌ Azure OpenAI Fallback Error: {e}")
+                    break
         else:
-            print("❌ Azure OpenAI not configured - no fallback available")
+            print("Azure OpenAI not configured - no fallback available")
         
-        # Return empty JSON as last resort
-        print("⚠️ All LLM methods failed - returning empty result")
         return '{}'
 
 
@@ -148,21 +164,35 @@ class OpenAIOnlyClient:
             from openai import AzureOpenAI
             self.client = AzureOpenAI(
                 api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                api_version="2025-01-01-preview",
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview"),
                 azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
             )
             self.deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
-            print("✅ OpenAI-only client initialized for Flow 2")
+            print("OpenAI-only client initialized for Flow 2")
         except Exception as e:
-            print(f"❌ OpenAI client initialization failed: {e}")
+            print(f"OpenAI client initialization failed: {e}")
             self.client = None
     
+    def _parse_retry_after(self, error_text):
+        """Extract wait time from rate limit error message"""
+        try:
+            # Look for "retry after X seconds" or "wait X seconds" patterns
+            match = re.search(r'retry after (\d+) second', error_text, re.IGNORECASE)
+            if not match:
+                match = re.search(r'wait (\d+) second', error_text, re.IGNORECASE)
+            
+            if match:
+                return int(match.group(1))
+        except:
+            pass
+        return None
+
     def chat_completion(self, system_prompt, user_message, temperature=0, max_tokens=1000):
         if not self.client:
             return '{}'
         
-        max_retries = 5
-        base_delay = 1  # Start with 1 second delay
+        max_retries = 10  # Increased for stability in large runs
+        base_delay = 2   # Slightly higher base delay
         
         for attempt in range(max_retries):
             try:
@@ -179,17 +209,24 @@ class OpenAIOnlyClient:
             except Exception as e:
                 error_msg = str(e)
                 if "429" in error_msg or "RateLimitReached" in error_msg:
-                    import random
-                    jitter = random.uniform(0.5, 1.5)
-                    delay = (base_delay * (2 ** attempt)) * jitter
-                    print(f"⚠️ Rate limit hit (429) for '{user_message[:30]}...'. Retrying in {delay:.2f}s (Attempt {attempt+1}/{max_retries})")
+                    # ✅ SMART RETRY: Follow Azure's recommended wait time
+                    retry_after = self._parse_retry_after(error_msg)
+                    if retry_after:
+                        delay = retry_after + 1.5  # Add small buffer to be 100% safe
+                    else:
+                        import random
+                        jitter = random.uniform(0.5, 1.5)
+                        delay = (base_delay * (2 ** attempt)) * jitter
+                    
+                    print(f"Rate limit hit (429) for '{user_message[:30]}...'. Requested wait: {retry_after if retry_after else 'N/A'}s. Waiting {delay:.2f}s (Attempt {attempt+1}/{max_retries})")
+                    delay = min(delay, 60) # Cap delay at 60s
                     time.sleep(delay)
                     continue
                 
                 print(f"OpenAI Error: {e}")
                 return '{}'
         
-        print(f"❌ Failed after {max_retries} attempts due to rate limits.")
+        print(f"Failed after {max_retries} attempts due to rate limits.")
         return '{}'
 
 
