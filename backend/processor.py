@@ -14,6 +14,7 @@ from backend.database import get_collection, reset_main_collections, RAW_DATA_CO
 from backend.llm_client import llm_client, flow2_client  # Import both clients
 from concurrent.futures import ThreadPoolExecutor
 from pymongo import UpdateOne
+from difflib import SequenceMatcher
 
 # Note: We use llm_client for all LLM operations (Azure Claude + Azure OpenAI fallback)
 # No direct OpenAI client needed here
@@ -25,6 +26,32 @@ OPENAI_MODEL = "gpt-4o-mini"
 
 # LLM cache to avoid duplicate API calls
 llm_cache = {}
+
+def normalize_synonyms(text):
+    """Normalize common FMCG synonyms to improve fuzzy matching."""
+    if not text: return ""
+    s = str(text).upper()
+    # Define synonym maps
+    syns = {
+        "CHOCOLATE": ["COCOA", "CHOC", "CHOCO"],
+        "STRAWBERRY": ["S/BERRY", "SBERRY", "STRWB"],
+        "VANILLA": ["VAN"],
+        "ASSORTED": ["ASST", "ASSTD"],
+        "GRAM": ["GM", "GMS", "G"],
+        "BISCUIT": ["BISCUITS", "COOKIES", "COOKIE", "SNACK", "SNACKS", "STICK", "STICKS", "STIX"],
+    }
+    for primary, aliases in syns.items():
+        for alias in aliases:
+            # Use regex to replace whole word only to avoid partial matches
+            s = re.sub(rf'\b{alias}\b', primary, s)
+    return s
+
+def calculate_similarity(a, b):
+    """Calculate fuzzy string similarity with synonym normalization."""
+    # Normalize synonyms before comparison
+    norm_a = normalize_synonyms(a)
+    norm_b = normalize_synonyms(b)
+    return SequenceMatcher(None, norm_a, norm_b).ratio()
 
 def get_cached_llm_result(item):
     """Fetch result from MongoDB cache."""
@@ -620,8 +647,10 @@ def simple_clean_item(name):
     """Fallback cleaner for when AI fails. Extracts and sorts unique keywords."""
     if not name: return ""
     s = str(name).upper()
+    # Normalize synonyms FIRST
+    s = normalize_synonyms(s)
     # Remove very common noise words only
-    for word in ["ITEM", "PACK", "FLAVOUR", "FLV"]:
+    for word in ["ITEM", "PACK", "FLAVOUR", "FLV", "BRAND"]:
         s = s.replace(word, " ")
     # Take alphanumeric words only and sort them
     words = sorted(list(set(re.findall(r'[A-Z0-9]+', s))))
@@ -791,7 +820,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             # 🚨 HARD FAMILY GUARD (MANDATORY)
             # If product_line is missing, downgrade to LOW_CONF to prevent wrong merges
             if not llm_line or llm_line in ["NONE", "UNKNOWN"]:
-                print(f"⚠️  FAMILY MISSING → LOW_CONF :: {item}")
+                # print(f"⚠️  FAMILY MISSING → LOW_CONF :: {item}")
                 clean_sig = simple_clean_item(item)
                 pre_group_key = (
                     f"LOW_CONF|{llm_brand}|{clean_sig}|"
@@ -813,6 +842,81 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
 
             
         pre_groups.setdefault(pre_group_key, []).append(d)
+
+    # ✅ UNIVERSAL FUZZY MERGE STAGE: Merge similar LOW_CONF single items within same (Market+Pack+Facts) context
+    # This specifically targets items the AI failed to group, like Kinder or residual Typos.
+    
+    all_group_keys = list(pre_groups.keys())
+    # print(f"Universal Fuzzy Merge Stage: Checking {len(all_group_keys)} groups for residual matches...")
+    
+    # 1. Group keys by STRICT Context: {Market|Pack|Facts : [keys]}
+    context_to_keys = {}
+    for k in all_group_keys:
+        parts = k.split("|")
+        # Identify structure based on HI/LOW flag
+        # We only consider LOW_CONF items that are currently SINGLES (len == 1)
+        if k.startswith("LOW_CONF|") and len(pre_groups[k]) == 1:
+             if len(parts) >= 6:
+                 ctx_key = "|".join([parts[3], parts[4], parts[5]]) # Market|Pack|Facts
+                 context_to_keys.setdefault(ctx_key, []).append(k)
+
+    # 2. Within each context, merge similar LOW_CONF keys
+    merged_count = 0
+    for ctx_key, keys in context_to_keys.items():
+        if len(keys) < 2: continue
+        
+        keys.sort()
+        merged_this_ctx = set()
+        
+        for i in range(len(keys)):
+            k1 = keys[i]
+            if k1 in merged_this_ctx: continue
+            if k1 not in pre_groups: continue
+            
+            for j in range(i + 1, len(keys)):
+                k2 = keys[j]
+                if k2 in merged_this_ctx: continue
+                if k2 not in pre_groups: continue
+
+                # Get items and norms for safety check
+                doc1 = pre_groups[k1][0]
+                doc2 = pre_groups[k2][0]
+                item1 = doc1.get("ITEM", "")
+                item2 = doc2.get("ITEM", "")
+                
+                norm1 = norm_map.get(item1, {})
+                norm2 = norm_map.get(item2, {})
+                
+                # SAFETY LOCK: Even for LOW_CONF, if AI extracted different non-null attributes, respect them
+                f1, f2 = norm1.get('flavour'), norm2.get('flavour')
+                p1, p2 = norm1.get('product_form'), norm2.get('product_form')
+                
+                # If flavours exist and are clearly different, do not merge regardless of similarity
+                if f1 and f2 and f1 != "UNKNOWN" and f2 != "UNKNOWN" and f1 != f2:
+                    continue
+                if p1 and p2 and p1 != "UNKNOWN" and p2 != "UNKNOWN" and p1 != p2:
+                    continue
+
+                sig1 = simple_clean_item(item1)
+                sig2 = simple_clean_item(item2)
+                
+                sim = calculate_similarity(sig1, sig2)
+                if sim > 0.75:
+                     # print(f"      - Comparing LOW_CONF: '{sig1}' vs '{sig2}' | Similarity: {sim:.2f}")
+                     pass
+
+                # If fuzzy match > 0.85, merge K2 into K1
+                if sim > 0.85:
+                    # print(f"   [FUZZY MATCH] Merging LOW_CONF Item '{item2}' INTO '{item1}' (Sim: {sim:.2f})")
+                    pre_groups[k1].extend(pre_groups[k2])
+                    pre_groups.pop(k2)
+                    merged_this_ctx.add(k2)
+                    merged_count += 1
+    
+    if merged_count > 0:
+        # print(f"✅ Universal Fuzzy Merge: Merged {merged_count} residual LOW_CONF items.")
+    else:
+        # print("ℹ️ Universal Fuzzy Merge: No additional LOW_CONF matches found.")
 
 
     # Apply Size Tolerance (5g Rules) within each Brand+Flavour+Market bucket
@@ -844,7 +948,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         if current_bucket:
             final_groups_list.append(current_bucket)
 
-    print(f"Clusters formed after size tolerance: {len(final_groups_list)}")
+    # print(f"Clusters formed after size tolerance: {len(final_groups_list)}")
 
 
     
@@ -867,7 +971,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 families_map.setdefault(fam, []).append(d)
             
             if len(families_map) > 1:
-                print(f"⚠️ AUDIT ALERT: Found {len(families_map)} families in one cluster {list(families_map.keys())}. Splitting.")
+                # print(f"⚠️ AUDIT ALERT: Found {len(families_map)} families in one cluster {list(families_map.keys())}. Splitting.")
                 valid_subgroups = list(families_map.values())
 
         for group_docs in valid_subgroups:

@@ -57,7 +57,7 @@ export const dashboardAPI = {
     getProduct: (mergeId) => api.get(`/dashboard/product/${mergeId}`),
     getLowConfidence: () => api.get('/dashboard/low-confidence'),
     getAnalyticsData: () => api.get('/dashboard/analytics-data'),
-    exportMasterStock: () => api.get('/export/master-stock', { responseType: 'blob' }),
+    exportMasterStock: (reportType = 'all') => api.get(`/export/master-stock?report_type=${reportType}`, { responseType: 'blob' }),
     resetDatabase: (clearCache = false) => api.post(`/database/reset?clear_cache=${clearCache}`),
 };
 

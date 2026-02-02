@@ -27,6 +27,8 @@ const Button = ({
         glass: 'glass text-gray-700 hover:bg-white/80 border border-white/30',
         // Info variant
         info: 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg',
+        // Warning variant
+        warning: 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg',
     };
 
     const sizes = {

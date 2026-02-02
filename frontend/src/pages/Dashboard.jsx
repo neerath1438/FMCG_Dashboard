@@ -66,14 +66,15 @@ const Dashboard = () => {
         }
     };
 
-    const handleExport = async () => {
+    const handleExport = async (type = 'all') => {
         try {
             setExporting(true);
-            const blob = await dashboardAPI.exportMasterStock();
+            const blob = await dashboardAPI.exportMasterStock(type);
             const url = window.URL.createObjectURL(new Blob([blob], { type: 'text/csv' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `Master_Stock_Export_${new Date().toISOString().split('T')[0]}.csv`);
+            const filePrefix = type === 'all' ? 'Master_Stock' : `Export_${type}`;
+            link.setAttribute('download', `${filePrefix}_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             link.parentNode.removeChild(link);
@@ -155,14 +156,43 @@ const Dashboard = () => {
                     </p>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-3 pt-2">
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                        <Button
+                            variant="success"
+                            icon={exporting ? RefreshCw : Download}
+                            onClick={() => handleExport('merged')}
+                            disabled={exporting}
+                            size="sm"
+                        >
+                            {exporting ? '...' : 'Merged'}
+                        </Button>
+                        <Button
+                            variant="info"
+                            icon={exporting ? RefreshCw : Download}
+                            onClick={() => handleExport('non_merged')}
+                            disabled={exporting}
+                            size="sm"
+                        >
+                            {exporting ? '...' : 'Single'}
+                        </Button>
+                        <Button
+                            variant="warning"
+                            icon={exporting ? RefreshCw : Download}
+                            onClick={() => handleExport('low_confidence')}
+                            disabled={exporting}
+                            size="sm"
+                        >
+                            {exporting ? '...' : 'Low Conf'}
+                        </Button>
                         <Button
                             variant="primary"
                             icon={exporting ? RefreshCw : Download}
-                            onClick={handleExport}
+                            onClick={() => handleExport('all')}
                             disabled={exporting}
+                            size="sm"
                         >
-                            {exporting ? 'Exporting...' : 'Export Data'}
+                            {exporting ? '...' : 'Full Export'}
                         </Button>
                         <button
                             onClick={fetchData}

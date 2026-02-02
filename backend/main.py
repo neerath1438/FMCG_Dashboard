@@ -510,13 +510,27 @@ async def chatbot_query(request: dict):
         }
 
 @app.get("/export/master-stock")
-async def export_master_stock():
-    """Export MASTER_STOCK collection to CSV with clean columns"""
-    print("📤 Starting export of master stock data...")
+async def export_master_stock(report_type: str = "all"):
+    """Export MASTER_STOCK collection with filtering options"""
+    print(f"📤 Starting export of {report_type} data...")
     coll = get_collection(MASTER_STOCK_COL)
     
+    # Define Filter Queries
+    query = {}
+    if report_type == "merged":
+        # QUERY: Items formed by merging 2 or more original documents
+        query = {"$expr": {"$gt": [{"$size": "$merge_items"}, 1]}}
+    elif report_type == "non_merged":
+        # QUERY: Single items (merge_items size 1 OR field missing)
+        query = {"$or": [
+            {"merge_items": {"$exists": False}},
+            {"merge_items": {"$size": 1}}
+        ]}
+    elif report_type == "low_confidence":
+        query = {"llm_confidence_min": {"$lt": 0.8}}
+        
     # Use find().batch_size to efficient memory management
-    docs_cursor = coll.find({}, {"_id": 0})
+    docs_cursor = coll.find(query, {"_id": 0})
     
     def generate_csv():
         import csv
