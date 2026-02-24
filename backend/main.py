@@ -780,7 +780,100 @@ async def reset_database(clear_cache: bool = False):
             "message": str(e)
         }
 
+
+# ─────────────────────────────────────────────────────
+#  PIPELINE ENDPOINTS (New - UI Pipeline Support)
+# ─────────────────────────────────────────────────────
+
+@app.get("/export/flow1-report")
+async def export_flow1_report():
+    """Export single_stock_data (Flow 1 output) as CSV."""
+    coll = get_collection(SINGLE_STOCK_COL)
+    docs_cursor = coll.find({}, {"_id": 0})
+
+    def generate():
+        import csv
+        output = io.StringIO()
+        writer = None
+        for doc in docs_cursor:
+            doc_upper = {}
+            for k, v in doc.items():
+                key = k.upper().replace(" ", "_").replace("-", "_").replace("/", "_").replace("'", "")
+                doc_upper[key] = " | ".join(map(str, v)) if isinstance(v, list) else str(v) if isinstance(v, dict) else v
+            if writer is None:
+                writer = csv.DictWriter(output, fieldnames=list(doc_upper.keys()), extrasaction='ignore')
+                writer.writeheader()
+            writer.writerow(doc_upper)
+        yield output.getvalue()
+
+    return StreamingResponse(
+        generate(),
+        headers={"Content-Disposition": 'attachment; filename="flow1_single_stock_export.csv"'},
+        media_type="text/csv"
+    )
+
+@app.post("/pipeline/run-mapping")
+async def pipeline_run_mapping():
+    """Run Mapping Analysis (Flow 3). Wrapper around existing mapping_analysis.run_mapping() - no logic changes."""
+    try:
+        root = str(Path(__file__).parent.parent)
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from mapping_analysis import run_mapping, connect_db
+
+        run_mapping()
+
+        db, _, _, coll_results = connect_db()
+        total = coll_results.count_documents({})
+        l1 = coll_results.count_documents({"qa_fields.match_level": "LEVEL_1"})
+        l2 = coll_results.count_documents({"qa_fields.match_level": "LEVEL_2"})
+        gaps = coll_results.count_documents({"qa_fields.match_level": "GAP"})
+
+        return {
+            "status": "success",
+            "total_mapped": total,
+            "level1_matches": l1,
+            "level2_matches": l2,
+            "gaps": gaps,
+            "message": f"Mapping complete. {total} records processed."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/export/mapping-report")
+async def export_mapping_report():
+    """Export mapping_results collection as CSV (Flow 3 output)."""
+    root = str(Path(__file__).parent.parent)
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from mapping_analysis import connect_db
+
+    db, _, _, coll_results = connect_db()
+    data = list(coll_results.find({}, {"_id": 0}))
+
+    def generate():
+        import csv
+        output = io.StringIO()
+        writer = None
+        for doc in data:
+            flat = {k: v for k, v in doc.items() if k != "qa_fields"}
+            if doc.get("qa_fields"):
+                flat["match_level"] = doc["qa_fields"].get("match_level", "")
+                flat["match_type"] = doc["qa_fields"].get("match_type", "")
+            if writer is None:
+                writer = csv.DictWriter(output, fieldnames=list(flat.keys()), extrasaction='ignore')
+                writer.writeheader()
+            writer.writerow(flat)
+        yield output.getvalue()
+
+    return StreamingResponse(
+        generate(),
+        headers={"Content-Disposition": 'attachment; filename="mapping_analysis_export.csv"'},
+        media_type="text/csv"
+    )
+
 from fastapi.staticfiles import StaticFiles
+
 
 # Mount exports directory for Chatbot Excel downloads
 export_dir = os.path.join(root_dir, "backend", "exports")

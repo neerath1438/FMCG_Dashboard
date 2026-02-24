@@ -9,6 +9,7 @@ import Upload from './pages/Upload';
 import LowConfidence from './pages/LowConfidence';
 import Analytics from './pages/Analytics';
 import Chatbot from './pages/Chatbot';
+import Pipeline from './pages/Pipeline';
 import Login from './pages/Login';
 
 import { Toaster } from 'react-hot-toast';
@@ -114,6 +115,13 @@ function AppRoutes() {
                 <ProtectedRoute>
                     <Layout>
                         <Chatbot />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            <Route path="/pipeline" element={
+                <ProtectedRoute>
+                    <Layout>
+                        <Pipeline />
                     </Layout>
                 </ProtectedRoute>
             } />

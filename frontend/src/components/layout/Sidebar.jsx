@@ -9,7 +9,8 @@ import {
     MessageSquare,
     Box,
     X,
-    Settings
+    Settings,
+    GitBranch
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -20,6 +21,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/products', icon: Package, label: 'Products' },
         { path: '/upload', icon: Upload, label: 'Upload' },
+        { path: '/pipeline', icon: GitBranch, label: 'Pipeline' },
         { path: '/low-confidence', icon: AlertTriangle, label: 'Low Confidence' },
         { path: '/analytics', icon: BarChart3, label: 'Analytics' },
         { path: '/chatbot', icon: MessageSquare, label: 'AI Assistant' },

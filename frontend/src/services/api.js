@@ -82,4 +82,25 @@ export const chatbotAPI = {
     sendQuery: (question, sessionId) => api.post('/chatbot/query', { question, session_id: sessionId }),
 };
 
+export const pipelineAPI = {
+    // Flow 1 — Upload Excel (same as uploadAPI)
+    uploadExcel: (file, signal) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/upload/excel', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 18000000,
+            signal,
+        });
+    },
+    // Flow 2 — AI Mastering (same as uploadAPI.triggerLLMMastering)
+    runLLMMastering: (sheetName) => api.post(`/process/llm-mastering/${sheetName}`),
+    // Flow 3 — Mapping Analysis
+    runMapping: () => api.post('/pipeline/run-mapping'),
+    // Exports
+    exportFlow1: () => api.get('/export/flow1-report', { responseType: 'blob' }),
+    exportFlow2: () => api.get('/export/master-stock', { responseType: 'blob' }),
+    exportFlow3: () => api.get('/export/mapping-report', { responseType: 'blob' }),
+};
+
 export default api;
