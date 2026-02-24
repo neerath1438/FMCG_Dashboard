@@ -298,6 +298,144 @@ async def get_summary():
         "low_confidence": low_confidence
     }
 
+@app.get("/api/audit/counts")
+async def get_audit_counts():
+    """Get audit dashboard counts for Nielsen data flow"""
+    # Get collections - using correct collection names
+    raw_data_coll = get_collection("raw_data")  # Raw Nielsen data
+    single_stock_coll = get_collection("single_stock_data")
+    master_stock_coll = get_collection("master_stock_data")
+    seven_eleven_coll = get_collection("7-eleven_data")  # Hyphen, not underscore
+    gaps_coll = get_collection("nielsen_gap_items")
+    seven_eleven_extra_coll = get_collection("7eleven_extra_items")  # No hyphen in 'extra'
+    
+    # Query for Nielsen Malaysia data
+    nielsen_query = {"Facts": "Sales Value", "Markets": "Pen Malaysia"}
+    
+    # Count documents
+    raw_nielsen = raw_data_coll.count_documents(nielsen_query)  # Raw Nielsen with query
+    single_stock = single_stock_coll.count_documents(nielsen_query)  # Apply same filter
+    master_stock = master_stock_coll.count_documents(nielsen_query)
+    ai_enriched = seven_eleven_coll.count_documents({})
+    
+    # Carried items: 7eleven_extra_items where Article_Description != "NOT CARRIED"
+    carried = seven_eleven_extra_coll.count_documents({"Article_Description": {"$ne": "NOT CARRIED"}})
+    
+    # 7-Eleven Gaps: 7eleven_extra_items where Article_Description = "NOT CARRIED"
+    gaps = seven_eleven_extra_coll.count_documents({"Article_Description": "NOT CARRIED"})
+    
+    # 7-Eleven Unique: AI Enriched - Carried Items (Reverse Gap)
+    seven_eleven_unique = ai_enriched - carried
+    
+    return {
+        "raw_nielsen": raw_nielsen,
+        "single_stock": single_stock,
+        "master_stock": master_stock,
+        "ai_enriched": ai_enriched,
+        "carried": carried,
+        "gaps": gaps,
+        "seven_eleven_unique": seven_eleven_unique
+    }
+
+@app.get("/api/filtered-records")
+async def get_filtered_records():
+    """Get the 7 records that were filtered out (in raw_data but not in single_stock_data)"""
+    raw_data_coll = get_collection("raw_data")
+    single_stock_coll = get_collection("single_stock_data")
+    
+    # Query for Nielsen Malaysia data
+    nielsen_query = {"Facts": "Sales Value", "Markets": "Pen Malaysia"}
+    
+    # Get all raw_data records with their unique identifiers
+    raw_docs = list(raw_data_coll.find(nielsen_query))
+    
+    # Create a set of unique keys from single_stock_data for comparison
+    # Using combination of BRAND, ITEM, VARIANT, MPACK, NRMSIZE as unique key
+    single_stock_keys = set()
+    for doc in single_stock_coll.find(nielsen_query):
+        key = (
+            doc.get("BRAND", ""),
+            doc.get("ITEM", ""),
+            doc.get("VARIANT", ""),
+            doc.get("MPACK", ""),
+            doc.get("NRMSIZE", "")
+        )
+        single_stock_keys.add(key)
+    
+    # Find filtered records (in raw but not in single)
+    filtered_docs = []
+    for doc in raw_docs:
+        key = (
+            doc.get("BRAND", ""),
+            doc.get("ITEM", ""),
+            doc.get("VARIANT", ""),
+            doc.get("MPACK", ""),
+            doc.get("NRMSIZE", "")
+        )
+        if key not in single_stock_keys:
+            # Convert ObjectId to string for JSON serialization
+            doc["_id"] = str(doc["_id"])
+            filtered_docs.append(doc)
+    
+    return {
+        "count": len(filtered_docs),
+        "records": filtered_docs
+    }
+
+@app.get("/api/raw-product/{product_id}")
+async def get_raw_product(product_id: str):
+    """Get raw product details by ID from raw_data collection"""
+    from bson import ObjectId
+    
+    raw_data_coll = get_collection("raw_data")
+    
+    try:
+        # Convert string ID to ObjectId
+        obj_id = ObjectId(product_id)
+        product = raw_data_coll.find_one({"_id": obj_id})
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Convert ObjectId to string for JSON serialization
+        product["_id"] = str(product["_id"])
+        
+        return product
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid product ID: {str(e)}")
+
+@app.get("/api/merged-products")
+async def get_merged_products():
+    """Get all products that were merged (merged_from_docs > 1) for Nielsen Malaysia"""
+    master_stock_coll = get_collection("master_stock_data")
+    
+    # Use OR to handle both Title Case and Uppercase field names with trailing spaces
+    # Title Case: "Facts": "Sales Value", "Markets": "Pen Malaysia"
+    # Upper Case: "FACTS": "Sales Value ", "MARKETS": "Pen Malaysia           "
+    
+    # Regex to handle case-insensitivity and trailing spaces
+    facts_regex = {"$regex": "^Sales Value", "$options": "i"}
+    markets_regex = {"$regex": "^Pen Malaysia", "$options": "i"}
+    
+    query = {
+        "merged_from_docs": {"$gt": 1},
+        "$or": [
+            {"Facts": facts_regex, "Markets": markets_regex},
+            {"FACTS": facts_regex, "MARKETS": markets_regex}
+        ]
+    }
+    
+    merged_products = list(master_stock_coll.find(query))
+    
+    # Convert ObjectId to string for JSON serialization
+    for product in merged_products:
+        product["_id"] = str(product["_id"])
+    
+    return {
+        "count": len(merged_products),
+        "products": merged_products
+    }
+
 @app.get("/dashboard/products")
 async def get_products(limit: int = 100, skip: int = 0, search: str = None, brand: str = None, confidence_status: str = 'all'):
     """Get products with server-side filtering and pagination"""
@@ -458,8 +596,24 @@ async def get_analytics_data():
 
 @app.get("/dashboard/product/{merge_id}")
 async def get_product_detail(merge_id: str):
+    """Get single product detail from master_stock_data"""
     coll = get_collection(MASTER_STOCK_COL)
+    
+    # Try searching by merge_id first
     product = coll.find_one({"merge_id": merge_id}, {"_id": 0})
+    
+    if not product:
+        # Fallback: Try searching by ObjectId as string
+        try:
+            from bson import ObjectId
+            # Use string representation of ObjectId to find the document
+            product = coll.find_one({"_id": ObjectId(merge_id)}, {"_id": 0})
+        except Exception:
+            product = None
+            
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
     return product
 
 @app.get("/dashboard/low-confidence")

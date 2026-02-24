@@ -30,10 +30,14 @@ const ProductCard = ({ product }) => {
     const mergeBadge = getMergeLevelBadge(product.merge_level);
     const confidenceBadge = product.llm_confidence_min ? getConfidenceBadge(product.llm_confidence_min) : null;
 
+    // Use _id for filtered records (raw data), merge_id for normal products
+    const productId = product._id || product.merge_id;
+    const isRawProduct = !!product._id && !product.merge_id;
+
     return (
         <Card
             hoverable
-            onClick={() => navigate(`/products/${product.merge_id}`)}
+            onClick={() => navigate(`/products/${productId}${isRawProduct ? '?raw=true' : ''}`)}
             className="h-full"
         >
             <div className="space-y-3">

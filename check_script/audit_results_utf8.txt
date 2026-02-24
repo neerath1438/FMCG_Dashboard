@@ -1,0 +1,202 @@
+Total Merged Records found (audit limit 50): 50
+============================================================
+1. MASTER: GLICO POCKY 45GM X1 STRAWBERRY
+   Brand: POCKY | Size: 45G | Flavor: STRAWBERRY | Form: STICK
+   MERGED FROM: ['GLICO POCKY 45GM X1 STRAWBERRY', 'GLICO POCKY STICK STRAWBERRY 50GM', 'GLICO TSUBU TSUBU ICHIGO POCKY (HEARTFUL) 53GM']
+------------------------------------------------------------
+2. MASTER: GLICO POCKY 45GM X1 STRAWBERRY
+   Brand: POCKY | Size: 45G | Flavor: STRAWBERRY | Form: STICK
+   MERGED FROM: ['GLICO POCKY 45GM X1 STRAWBERRY', 'GLICO POCKY STICK STRAWBERRY 50GM', 'GLICO TSUBU TSUBU ICHIGO POCKY (HEARTFUL) 53GM']
+------------------------------------------------------------
+3. MASTER: GLICO POCKY 45GM X1 STRAWBERRY
+   Brand: POCKY | Size: 45G | Flavor: STRAWBERRY | Form: STICK
+   MERGED FROM: ['GLICO POCKY 45GM X1 STRAWBERRY', 'GLICO POCKY STICK STRAWBERRY 50GM', 'GLICO TSUBU TSUBU ICHIGO POCKY (HEARTFUL) 53GM']
+------------------------------------------------------------
+4. MASTER: GLICO POCKY 45GM X1 STRAWBERRY
+   Brand: POCKY | Size: 45G | Flavor: STRAWBERRY | Form: STICK
+   MERGED FROM: ['GLICO POCKY 45GM X1 STRAWBERRY', 'GLICO POCKY STICK STRAWBERRY 50GM', 'GLICO TSUBU TSUBU ICHIGO POCKY (HEARTFUL) 53GM']
+------------------------------------------------------------
+5. MASTER: GLICO POCKY 45GM X1 STRAWBERRY
+   Brand: POCKY | Size: 45G | Flavor: STRAWBERRY | Form: STICK
+   MERGED FROM: ['GLICO POCKY 45GM X1 STRAWBERRY', 'GLICO POCKY STICK STRAWBERRY 50GM', 'GLICO TSUBU TSUBU ICHIGO POCKY (HEARTFUL) 53GM']
+------------------------------------------------------------
+6. MASTER: GLICO POCKY 45GM X1 STRAWBERRY
+   Brand: POCKY | Size: 45G | Flavor: STRAWBERRY | Form: STICK
+   MERGED FROM: ['GLICO POCKY 45GM X1 STRAWBERRY', 'GLICO POCKY STICK STRAWBERRY 50GM', 'GLICO TSUBU TSUBU ICHIGO POCKY (HEARTFUL) 53GM']
+------------------------------------------------------------
+7. MASTER: JULIES LEMOND CHOCOLATE 180G (10X18GM)
+   Brand: JULIES | Size: 180G | Flavor: CHOCOLATE | Form: BISCUIT
+   MERGED FROM: ['JULIES LEMOND CHOCOLATE 180G (10X18GM)', 'JULIES LEMOND CHOCOLATE 180G (18GM X10)']
+------------------------------------------------------------
+8. MASTER: JULIES LEMOND CHOCOLATE 180G (10X18GM)
+   Brand: JULIES | Size: 180G | Flavor: CHOCOLATE | Form: BISCUIT
+   MERGED FROM: ['JULIES LEMOND CHOCOLATE 180G (10X18GM)', 'JULIES LEMOND CHOCOLATE 180G (18GM X10)']
+------------------------------------------------------------
+9. MASTER: JULIES LEMOND CHOCOLATE 180G (10X18GM)
+   Brand: JULIES | Size: 180G | Flavor: CHOCOLATE | Form: BISCUIT
+   MERGED FROM: ['JULIES LEMOND CHOCOLATE 180G (10X18GM)', 'JULIES LEMOND CHOCOLATE 180G (18GM X10)']
+------------------------------------------------------------
+10. MASTER: JULIES LEMOND CHOCOLATE 180G (10X18GM)
+   Brand: JULIES | Size: 180G | Flavor: CHOCOLATE | Form: BISCUIT
+   MERGED FROM: ['JULIES LEMOND CHOCOLATE 180G (10X18GM)', 'JULIES LEMOND CHOCOLATE 180G (18GM X10)']
+------------------------------------------------------------
+11. MASTER: JULIES LEMOND CHOCOLATE 180G (10X18GM)
+   Brand: JULIES | Size: 180G | Flavor: CHOCOLATE | Form: BISCUIT
+   MERGED FROM: ['JULIES LEMOND CHOCOLATE 180G (10X18GM)', 'JULIES LEMOND CHOCOLATE 180G (18GM X10)']
+------------------------------------------------------------
+12. MASTER: JULIES LEMOND CHOCOLATE 180G (10X18GM)
+   Brand: JULIES | Size: 180G | Flavor: CHOCOLATE | Form: BISCUIT
+   MERGED FROM: ['JULIES LEMOND CHOCOLATE 180G (10X18GM)', 'JULIES LEMOND CHOCOLATE 180G (18GM X10)']
+------------------------------------------------------------
+13. MASTER: NABATI RICHOCO WAFER 46G
+   Brand: NABATI | Size: 46G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+14. MASTER: NABATI RICHOCO WAFER 46G
+   Brand: NABATI | Size: 46G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+15. MASTER: NABATI RICHOCO WAFER 46G
+   Brand: NABATI | Size: 46G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+16. MASTER: NABATI RICHOCO WAFER 46G
+   Brand: NABATI | Size: 46G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+17. MASTER: NABATI RICHOCO WAFER 46G
+   Brand: NABATI | Size: 46G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+18. MASTER: NABATI RICHOCO WAFER 46G
+   Brand: NABATI | Size: 46G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+19. MASTER: NABATI RICHOCO WAFER 45G
+   Brand: NABATI | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+20. MASTER: NABATI RICHOCO WAFER 45G
+   Brand: NABATI | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+21. MASTER: NABATI RICHOCO WAFER 45G
+   Brand: NABATI | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+22. MASTER: NABATI RICHOCO WAFER 45G
+   Brand: NABATI | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+23. MASTER: NABATI RICHOCO WAFER 45G
+   Brand: NABATI | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+24. MASTER: NABATI RICHOCO WAFER 45G
+   Brand: NABATI | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+25. MASTER: NABATI RICHOCO WAFER 37G
+   Brand: NABATI | Size: 37G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 37G', 'NABATI RICHOCO WAFER CHOCOLATE 40G EXTRA 30% (EXT 12GM) 52GM', 'NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+26. MASTER: NABATI RICHOCO WAFER 37G
+   Brand: NABATI | Size: 37G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 37G', 'NABATI RICHOCO WAFER CHOCOLATE 40G EXTRA 30% (EXT 12GM) 52GM', 'NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+27. MASTER: NABATI RICHOCO WAFER 37G
+   Brand: NABATI | Size: 37G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 37G', 'NABATI RICHOCO WAFER CHOCOLATE 40G EXTRA 30% (EXT 12GM) 52GM', 'NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+28. MASTER: NABATI RICHOCO WAFER 37G
+   Brand: NABATI | Size: 37G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 37G', 'NABATI RICHOCO WAFER CHOCOLATE 40G EXTRA 30% (EXT 12GM) 52GM', 'NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+29. MASTER: NABATI RICHOCO WAFER 37G
+   Brand: NABATI | Size: 37G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 37G', 'NABATI RICHOCO WAFER CHOCOLATE 40G EXTRA 30% (EXT 12GM) 52GM', 'NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+30. MASTER: NABATI RICHOCO WAFER 37G
+   Brand: NABATI | Size: 37G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['NABATI RICHOCO WAFER 37G', 'NABATI RICHOCO WAFER CHOCOLATE 40G EXTRA 30% (EXT 12GM) 52GM', 'NABATI RICHOCO WAFER 45G', 'NABATI RICHOCO WAFER 46G', 'RICHOCO CHOCOLATE WAFER 50G']
+------------------------------------------------------------
+31. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+32. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+33. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+34. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+35. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+36. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+37. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+38. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+39. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+40. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+41. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+42. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+43. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+44. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+45. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+46. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+47. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+48. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+49. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------
+50. MASTER: LOACKER CREMKAKAO 45 GM
+   Brand: LOACKER | Size: 45G | Flavor: CHOCOLATE | Form: WAFER
+   MERGED FROM: ['LOACKER CREMKAKAO 45 GM', 'LOACKER CREMKAKAO 45GM']
+------------------------------------------------------------

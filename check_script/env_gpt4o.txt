@@ -1,0 +1,4 @@
+# Azure OpenAI Configuration (Updated for gpt-4o - East US 2)
+AZURE_OPENAI_ENDPOINT=https://your-eastus2-endpoint.openai.azure.com
+AZURE_OPENAI_API_KEY=YOUR_AZURE_OPENAI_API_KEY_HERE
+AZURE_OPENAI_DEPLOYMENT=gpt-4o

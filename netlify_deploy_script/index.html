@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Script — FMCG Mastering Project</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+Tamil:wght@400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f4f8;
+            color: #1a202c;
+            padding: 40px 20px;
+        }
+
+        .page {
+            max-width: 860px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6C63FF, #00D4AA);
+            color: white;
+            padding: 36px 40px;
+            border-radius: 20px;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+        .tip-box {
+            background: #fff8e1;
+            border: 1px solid #ffc107;
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 32px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .tip-box strong {
+            color: #e65100;
+        }
+
+        .slide-block {
+            background: white;
+            border-radius: 18px;
+            margin-bottom: 28px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .slide-header {
+            padding: 18px 28px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .slide-num {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6C63FF, #00D4AA);
+            color: white;
+            font-weight: 900;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .slide-title {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .slide-subtitle {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 2px;
+        }
+
+        .slide-body {
+            padding: 0 28px 28px;
+        }
+
+        .section {
+            margin-top: 20px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .label-en {
+            background: #ebf8ff;
+            color: #2b6cb0;
+        }
+
+        .label-ta {
+            background: #f0fff4;
+            color: #276749;
+        }
+
+        .label-tip {
+            background: #fff5f5;
+            color: #c53030;
+        }
+
+        .english-script {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 16px 20px;
+            border-radius: 0 10px 10px 0;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #2d3748;
+            font-style: italic;
+        }
+
+        .tamil-note {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+            padding: 14px 20px;
+            border-radius: 0 10px 10px 0;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #2d3748;
+            font-family: 'Noto Sans Tamil', 'Inter', sans-serif;
+        }
+
+        .tip-inline {
+            background: #fff5f5;
+            border-left: 4px solid #fc8181;
+            padding: 12px 18px;
+            border-radius: 0 10px 10px 0;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #742a2a;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 20px 0;
+        }
+
+        .pro-tips {
+            background: white;
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 28px;
+        }
+
+        .pro-tips h2 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 18px;
+            color: #6C63FF;
+        }
+
+        .tip-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 14px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .tip-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 13px;
+            color: #a0aec0;
+            margin-top: 32px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 20px;
+            }
+
+            .slide-block {
+                box-shadow: none;
+                border: 1px solid #e2e8f0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <div class="header">
+            <h1>📋 Presentation Script</h1>
+            <p>FMCG Product Mastering &amp; 7-Eleven Gap Analysis &nbsp;|&nbsp; Client: Roshini Alexander</p>
+            <p style="margin-top:6px; font-size:13px;">Each slide — English script + Tamil explanation</p>
+        </div>
+
+        <div class="tip-box">
+            <strong>Before you start:</strong> Open the presentation on your laptop. Keep this script on your phone or a
+            printed copy.
+            Speak <strong>slowly and clearly</strong>. After each slide, pause and ask <em>"Any questions on this?"</em>
+        </div>
+
+        <!-- SLIDE 1 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">1</div>
+                <div>
+                    <div class="slide-title">🛒 Opening — Title Slide</div>
+                    <div class="slide-subtitle">FMCG Product Mastering &amp; 7-Eleven Gap Analysis</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "Good morning Roshini. Thank you for your time today. I'll be walking you through the FMCG
+                        Product Mastering project — what problem we solved, how our system works, and the final results
+                        and deliverables."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        இந்த slide-ல் project title மட்டும் இருக்கு. Confident-ஆ smile பண்ணி பேசுங்கள்.
+                        "walk you through" என்றால் "step by step காட்டுவேன்" என்று அர்த்தம்.
+                        Nervous ஆகாதீர்கள் — இது simple opening!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">2</div>
+                <div>
+                    <div class="slide-title">⚠️ The Challenge</div>
+                    <div class="slide-subtitle">Why Product Mastering Was Critical</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "The core problem was inconsistent product data. The same product appeared under different names
+                        and barcodes in the Nielsen dataset — causing inflated SKU counts and incorrect sales figures.
+                        For example, 'Munchys Oat Krunch Dark Choc 390G' and 'Munchys OatKrunch Dark Chocolate 390GM'
+                        are the exact same product — but they showed up as two completely separate records. Without
+                        fixing this, it was impossible to do an accurate comparison with 7-Eleven data."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        "Same product, different names-la irunthuchu" என்று சொல்லுங்கள்.
+                        Screen-ல் Oat Krunch example point பண்ணுங்கள்.
+                        "SKU count" என்றால் unique product count.
+                        "Inflated" என்றால் actual-ஐ விட அதிகமாக கண்டதுனு சொல்லுங்கள்.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">3</div>
+                <div>
+                    <div class="slide-title">🤖 Our Solution</div>
+                    <div class="slide-subtitle">A 2-Layer AI-Powered Mastering Pipeline</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "To solve this, we built a 2-layer AI pipeline. The first layer uses strict rules — if two
+                        records share the same barcode and market, they're merged automatically. The second layer uses
+                        Agentic AI to read each product description and extract key attributes — Brand, Flavour, Size,
+                        and Variant — and then intelligently group similar products together. On top of this, we have
+                        built-in safety guards that prevent similar-sounding but actually different products from being
+                        incorrectly merged — for example, Hazelnut cookies will never be merged with Chocolate Chip
+                        cookies."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        "2 step process — first rules-based, then AI" என்று சொல்லுங்கள்.
+                        "Safety guards" என்பது Hazelnut-ஐ Chocolate Chip-உடன் merge பண்ணாம பார்க்கும் logic.
+                        Left side flow steps-ஐ point பண்ணி explain பண்ணுங்கள்.
+                        Right side-ல் LLM Prompt Design card இருக்கு — "these are the rules we gave the AI" என்று
+                        சொல்லுங்கள்.
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-tip">💡 Tip</span>
+                    <div class="tip-inline">
+                        Client technical details கேட்டால்: "We use enterprise-grade AI with a custom prompt designed
+                        specifically for Malaysian FMCG product naming patterns." — இந்த one line போதும்.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">4</div>
+                <div>
+                    <div class="slide-title">📊 Key Results</div>
+                    <div class="slide-subtitle">The Numbers Speak</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "Here are the key numbers from this project. We processed all 7,192 Nielsen records. We also
+                        analysed 3,220 products from 7-Eleven's catalogue. Most importantly, we identified and
+                        successfully merged 107 product groups where duplicate records existed — consolidating them into
+                        clean, single master records. Our AI extraction maintained consistently high confidence across
+                        all records."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        Screen-ல் 4 numbers இருக்கும் — ஒவ்வொன்னையும் point பண்ணி சொல்லுங்கள்.
+                        "107 product groups" — "இந்த 107 groups-ல் same product different names-ல் irunthuchu, athai oru
+                        single record-a pannom" என்று சொல்லுங்கள்.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">5</div>
+                <div>
+                    <div class="slide-title">✅ Accuracy Proof</div>
+                    <div class="slide-subtitle">Before vs After — Oat Krunch</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "Let me show you a concrete example of what this looks like. Before our system, all Oat Krunch
+                        products — regardless of flavour — were being grouped into a single record. Chia Seed, Dark
+                        Chocolate, Strawberry and Blackcurrant, Nutty Choco — all treated as the same product. That's
+                        clearly wrong. After our fix, each flavour now has its own dedicated cluster. The AI correctly
+                        separates them based on the flavour attributes it extracts from the product name."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        Left side = "Before" (wrong), Right side = "After" (correct).
+                        Left-ஐ point பண்ணி "Before — everything was one cluster" சொல்லுங்கள்.
+                        Right-ஐ point பண்ணி "After — each flavour is now separate" சொல்லுங்கள்.
+                        Visual-ஆ clearly தெரியும் — client புரிஞ்சுக்குவாங்க.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">6</div>
+                <div>
+                    <div class="slide-title">🔒 Skinny Baker Fix</div>
+                    <div class="slide-subtitle">Priority-Based Flavour Guard</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "Another challenge was handling typos and abbreviations in product names. Our system
+                        automatically corrects these. For example, 'MACADMIA' — a spelling mistake in the raw data — is
+                        correctly mapped to 'MACADAMIA'. 'CRNBRIES' becomes 'CRANBERRY'. 'HZLNT' becomes 'HAZELNUT'.
+                        This is done using a priority-based guard system — it checks for specific flavours first, before
+                        falling back to generic ones. This ensures products like Hazelnut Chocolate Chip and Double
+                        Chocolate Chip are kept as separate groups."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        Right side-ல் Skinny Baker examples இருக்கு — ஒவ்வொன்னையும் point பண்ணுங்கள்.
+                        "Typo normalization" — "Raw data-ல் spelling mistake irunthalum namma system correct-a identify
+                        panum" என்று சொல்லுங்கள்.
+                        Bottom-ல் "* Typo normalization" note இருக்கு — அதை client கவனிக்க வைக்கலாம்.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 7 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">7</div>
+                <div>
+                    <div class="slide-title">🏪 7-Eleven Gap Analysis</div>
+                    <div class="slide-subtitle">Nielsen vs 7-Eleven: What's Missing?</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "Now for the gap analysis — this is where we compare Nielsen's full product range against what's
+                        available in 7-Eleven stores. Out of 7,192 Nielsen products, we found that 910 are currently
+                        carried in 7-Eleven. That leaves 6,282 Nielsen products that are NOT in 7-Eleven — these are the
+                        gap products. We used a 3-level matching approach: first we match by exact barcode, then by
+                        cluster membership, and finally by brand and attribute similarity with a 10% size tolerance."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        "6,282 gap products" — "இந்த products Nielsen-ல இருக்கு, but 7-Eleven-ல இல்ல" என்று சொல்லுங்கள்.
+                        "Potential opportunities" — "7-Eleven இந்த products stock பண்ணா customer demand meet பண்ண
+                        முடியும்" என்று சொல்லலாம்.
+                        Table-ல் L1, L2, L3 matching levels இருக்கு — "we have 3 ways to find a match" என்று
+                        சொல்லுங்கள்.
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-tip">💡 High Impact Moment</span>
+                    <div class="tip-inline">
+                        இந்த slide-ல் client most interested ஆவாங்க. Slowly explain பண்ணுங்கள். கேள்வி கேட்டால் "The
+                        full list is in the Excel report — 7Eleven_Not_Carried_Items.xlsx" என்று சொல்லுங்கள்.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 8 -->
+        <div class="slide-block">
+            <div class="slide-header">
+                <div class="slide-num">8</div>
+                <div>
+                    <div class="slide-title">📁 Deliverables</div>
+                    <div class="slide-subtitle">6 Final Reports Ready to Use</div>
+                </div>
+            </div>
+            <div class="slide-body">
+                <div class="section">
+                    <span class="section-label label-en">🗣 Speak in English</span>
+                    <div class="english-script">
+                        "Finally, here's a summary of everything we've delivered. Six Excel reports — including the
+                        complete Master Stock with all enriched attributes, the combined Gap Analysis report showing all
+                        Nielsen products with their 7-Eleven status, separate reports for carried and not-carried items,
+                        and the full raw datasets for both Nielsen and 7-Eleven. All files are structured in the exact
+                        column format you requested. Everything is ready for your team to use immediately."
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-ta">💬 Tamil Explanation</span>
+                    <div class="tamil-note">
+                        ஒவ்வொரு file-ஐயும் point பண்ணி பேசுங்கள்.
+                        "7Eleven_Gap_Analysis.xlsx — இது combined report, carried + not-carried எல்லாம் இதுல இருக்கு"
+                        என்று சொல்லுங்கள்.
+                        "Everything is ready for your team to use immediately" — இந்த last sentence confident-ஆ
+                        சொல்லுங்கள்.
+                        பிறகு "Do you have any questions?" என்று கேளுங்கள்.
+                    </div>
+                </div>
+                <div class="section">
+                    <span class="section-label label-tip">💡 Closing</span>
+                    <div class="tip-inline">
+                        Presentation முடிஞ்சவுடன்: <em>"Thank you Roshini. All the files have been shared. Please let me
+                            know if you need any changes or additional analysis."</em> — இந்த ஒரு line சொல்லி முடிங்கள்.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRO TIPS -->
+        <div class="pro-tips">
+            <h2>💡 Presentation Tips</h2>
+            <div class="tip-row">
+                <span class="tip-icon">🐢</span>
+                <div><strong>Speak slowly.</strong> Client-கிட்ட confidence show பண்ண slow and clear பேசுவது முக்கியம்.
+                    Rush பண்ணாதீர்கள்.</div>
+            </div>
+            <div class="tip-row">
+                <span class="tip-icon">👉</span>
+                <div><strong>Point to the screen.</strong> Numbers and charts சொல்லும்போது screen-ல் point பண்ணுங்கள் —
+                    client attention கிட்டக்கும்.</div>
+            </div>
+            <div class="tip-row">
+                <span class="tip-icon">❓</span>
+                <div><strong>Pause after each slide.</strong> "Any questions on this before I move on?" — இதை ஒவ்வொரு
+                    slide-க்கும் பின்னாடி கேளுங்கள்.</div>
+            </div>
+            <div class="tip-row">
+                <span class="tip-icon">🧘</span>
+                <div><strong>If you get stuck.</strong> "Let me pull up the data for that" அல்லது "I'll get back to you
+                    on the exact number" — இந்த phrases use பண்ணலாம்.</div>
+            </div>
+            <div class="tip-row">
+                <span class="tip-icon">📊</span>
+                <div><strong>If asked for more details.</strong> "The full breakdown is in the Excel files — I can walk
+                    you through that after the presentation" என்று சொல்லுங்கள்.</div>
+            </div>
+            <div class="tip-row">
+                <span class="tip-icon">🎯</span>
+                <div><strong>Most important slide.</strong> Slide 7 (Gap Analysis) — client இதை most care பண்ணுவாங்க.
+                    இந்த slide-ல் extra time எடுங்கள்.</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            FMCG Mastering Project &nbsp;|&nbsp; Presentation Script &nbsp;|&nbsp; February 2026<br>
+            <span style="margin-top:4px; display:block;">Print this page (Ctrl+P) to use during the presentation</span>
+        </div>
+
+    </div>
+</body>
+
+</html>

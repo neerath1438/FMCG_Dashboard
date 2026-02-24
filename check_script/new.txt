@@ -1,0 +1,31 @@
+### FMCG Chatbot Verification Questions (Sample Data: Pocky Milk 25g)
+
+Use these questions to test if the Chatbot's Stage 1 (Parsing) and Stage 2 (Querying) are working perfectly with your data.
+
+#### 1. Basic Existence & Property Search
+- "Show me the details for Pocky Milk 25g in Pen Malaysia."
+- "What is the UPC for GLICO BRAND POCKY MILK FLAVOUR 25GM?"
+- "Find the manufacturer for Pocky items."
+
+#### 2. Specific "Facts" Filtering (Testing Regex/Precision)
+- "Show me the Sales Value for Pocky in Pen Malaysia."
+- "What is the Numeric Distribution Selling (C) for Pocky Milk 25g?"
+- "Find Weighted Distribution reach data for Pocky."
+- "What is the Price per Sales for Pocky in Malaysia?"
+
+#### 3. Sales & Trends (Testing Numeric Fields)
+- "What was the Sales Value for Pocky in Jan 24?"
+- "Show me the MAT Nov'24 sales value for Pocky Milk."
+- "How many Sales Units were recorded for Pocky in Feb 24?"
+- "List the sales trend (Sales Value) for Pocky from Dec 23 to Nov 24."
+
+#### 4. Audit & Metadata (Testing Merge Info)
+- "How many documents were merged into the Pocky master record?"
+- "What merge rule was used for Pocky Milk 25g?"
+- "Show me the original items combined for Pocky."
+- "Which sheet name does the Pocky data come from?"
+
+#### 5. Complex "Master Node" Test
+- "Find Pocky Milk 25g in Pen Malaysia with Sales Units fact and show me MAT Nov'24 value."
+- "Calculate the total Sales Value for Pocky for the last 3 months." (Note: Test if Stage 2 handles aggregation)
+- "Search for Pocky with Weighted Distribution facts and tell me the confidence score."

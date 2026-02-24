@@ -1,0 +1,42 @@
+{
+  "raw_data": [
+    {
+      "item": "HUP SENG CREAM CRACKER 12X428 GM",
+      "found": true,
+      "upc": 200068355899
+    },
+    {
+      "item": "HUP SENG CRM CRACKER 428GMX12",
+      "found": true,
+      "upc": 200068495027
+    }
+  ],
+  "master_stock_data": [
+    {
+      "queried_item": "HUP SENG CREAM CRACKER 12X428 GM",
+      "master_item": "HUP SENG CREAM CRACKER 12X428 GM",
+      "merge_id": "HUP SENG_b1b72278f7a44c60ab591315f479c9a3",
+      "merge_items": [
+        "HUP SENG CREAM CRACKER 12X428 GM"
+      ],
+      "attributes": {
+        "brand": null,
+        "flavour": "NORMAL",
+        "size": "428G"
+      }
+    },
+    {
+      "queried_item": "HUP SENG CRM CRACKER 428GMX12",
+      "master_item": "HUP SENG CRM CRACKER 428GMX12",
+      "merge_id": "HUP SENG_9c8980e6b599486ba90dc22d691286ac",
+      "merge_items": [
+        "HUP SENG CRM CRACKER 428GMX12"
+      ],
+      "attributes": {
+        "brand": null,
+        "flavour": "NORMAL",
+        "size": "428G"
+      }
+    }
+  ]
+}

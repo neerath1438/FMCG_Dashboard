@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Notes — Main UPC Business Rule</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f8fa;
+            color: #1a202c;
+            padding: 40px 20px;
+        }
+
+        .page {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6C63FF, #00D4AA);
+            color: white;
+            padding: 32px 36px;
+            border-radius: 18px;
+            margin-bottom: 28px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 32px;
+            margin-bottom: 22px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+        }
+
+        .card h2 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .label-blue {
+            background: #ebf8ff;
+            color: #2b6cb0;
+        }
+
+        .label-green {
+            background: #f0fff4;
+            color: #276749;
+        }
+
+        .label-orange {
+            background: #fffaf0;
+            color: #c05621;
+        }
+
+        .label-red {
+            background: #fff5f5;
+            color: #c53030;
+        }
+
+        .box-blue {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 18px 20px;
+            border-radius: 0 12px 12px 0;
+            font-size: 15px;
+            line-height: 1.9;
+            color: #2d3748;
+            font-style: italic;
+        }
+
+        .box-green {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+            padding: 16px 20px;
+            border-radius: 0 12px 12px 0;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #2d3748;
+        }
+
+        .box-orange {
+            background: #fffaf0;
+            border-left: 4px solid #ed8936;
+            padding: 16px 20px;
+            border-radius: 0 12px 12px 0;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #2d3748;
+        }
+
+        .box-red {
+            background: #fff5f5;
+            border-left: 4px solid #fc8181;
+            padding: 14px 18px;
+            border-radius: 0 12px 12px 0;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #742a2a;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+
+        th {
+            background: #f0f4f8;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #4a5568;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #2d3748;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .section {
+            margin-top: 20px;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 20px 0;
+        }
+
+        .note-box {
+            background: #fffbeb;
+            border: 1px solid #f6e05e;
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-bottom: 22px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .note-box strong {
+            color: #92400e;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #a0aec0;
+            margin-top: 32px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 20px;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #e2e8f0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <div class="header">
+            <h1>📝 Meeting Notes — Main UPC Business Rule</h1>
+            <p>Topic: How Main_UPC is selected &nbsp;|&nbsp; Client: Roshini Alexander &nbsp;|&nbsp; February 2026</p>
+        </div>
+
+        <div class="note-box">
+            <strong>⚡ Purpose of this document:</strong> Meeting-ல் Main_UPC பத்தி discuss பண்ணும்போது — நாம் பண்ணியது
+            explain பண்ணி, client confirmation கேக்க ஒரு reference sheet.
+        </div>
+
+        <!-- WHAT CLIENT ASKED -->
+        <div class="card">
+            <h2>📋 Client Requirement (Original)</h2>
+            <div class="box-orange">
+                "Nielsen items will be reduced and standardized by grouping similar products and selecting a
+                <strong>single Main_UPC</strong> and associated <strong>UPC_GroupName</strong> based on <strong>defined
+                    business rules</strong>."
+            </div>
+            <div class="section">
+                <span class="label label-green">💬 Tamil — என்ன சொல்கிறார்கள்?</span>
+                <div class="box-green">
+                    ஒரே மாதிரி products-ஐ group பண்ணி, ஒவ்வொரு group-க்கும் ஒரு "main" UPC தேர்வு பண்ணணும் — business
+                    rule-படி.
+                    "Defined business rule" என்றால் randomly எடுக்காமல், ஒரு logic-வச்சு எடுக்கணும்.
+                </div>
+            </div>
+        </div>
+
+        <!-- WHAT WE DID -->
+        <div class="card">
+            <h2>✅ நாம் பண்ணியது (What we implemented)</h2>
+
+            <div class="section">
+                <span class="label label-blue">Part 1 — Grouping</span>
+                <div class="box-blue">
+                    We built a 2-layer AI pipeline that groups similar Nielsen products into clusters based on Brand,
+                    Flavour, Size and Variant attributes — successfully merging 107 product groups.
+                </div>
+            </div>
+            <hr class="divider">
+            <div class="section">
+                <span class="label label-blue">Part 2 — Main_UPC Selection</span>
+                <div class="box-blue">
+                    For each merged cluster, we designate a Main_UPC — the representative record for that group.
+                    Currently, the system selects the first processed record within the cluster as the Main_UPC. The
+                    Main_UPC and UPC_GroupName are available in the output Excel as dedicated columns.
+                </div>
+            </div>
+            <div class="section">
+                <span class="label label-green">💬 Tamil — Simple-ஆ சொல்லணும்னா</span>
+                <div class="box-green">
+                    "நாம் grouping பண்ணி Main_UPC column output-ல் கொடுத்திருக்கோம்.
+                    இப்போது first record-ஐ Main UPC-ஆ எடுக்கிறோம் — ஆனால்
+                    உங்கள் business rule என்னன்னு confirm பண்ணினா அதுக்கு மாத்திடலாம்."
+                </div>
+            </div>
+        </div>
+
+        <!-- QUESTION TO ASK -->
+        <div class="card">
+            <h2>❓ Meeting-ல் கேக்கணும் (Confirmation Question)</h2>
+            <div class="section">
+                <span class="label label-blue">🗣 Speak in English</span>
+                <div class="box-blue">
+                    "For the Main_UPC selection — we've already implemented the grouping and the Main_UPC column is
+                    available in your Excel output. Currently, the system uses the first processed record in each
+                    cluster as the Main_UPC. To align this with your preferred business rule — should we select the UPC
+                    with the highest sales value, or the one with the most complete monthly data? Or do you have a
+                    specific rule in mind? Once confirmed, we can update it immediately."
+                </div>
+            </div>
+            <div class="section">
+                <span class="label label-green">💬 Tamil — எப்படி நடக்கும்</span>
+                <div class="box-green">
+                    முதலில் "நாம் பண்ணினோம்" என்று சொல்லி, பிறகு "which rule prefer பண்றீங்க?" என்று கேளுங்கள்.
+                    இது professional — நாம் already work பண்ணியிருக்கோம், fine-tuning மட்டும் client input வேணும்.
+                </div>
+            </div>
+        </div>
+
+        <!-- POSSIBLE ANSWERS -->
+        <div class="card">
+            <h2>📊 Client என்ன சொன்னாலும் — நம் action</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Client சொன்னால்</th>
+                        <th>நாம் பண்றது</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Highest sales value (MAT Nov'24)</td>
+                        <td>MAT Nov'24 column highest UPC = Main_UPC ஆக set பண்றோம்</td>
+                        <td>~1 hour</td>
+                    </tr>
+                    <tr>
+                        <td>Most complete data</td>
+                        <td>அதிக monthly data columns உள்ள UPC = Main_UPC</td>
+                        <td>~1 hour</td>
+                    </tr>
+                    <tr>
+                        <td>Standard barcode (13-digit EAN)</td>
+                        <td>13-digit UPC = Main_UPC preference</td>
+                        <td>~1 hour</td>
+                    </tr>
+                    <tr>
+                        <td>Current logic fine / Any one OK</td>
+                        <td>திருத்த வேண்டாம் — already done ✅</td>
+                        <td>0 hours</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="section">
+                <span class="label label-red">⚠️ Important</span>
+                <div class="box-red">
+                    Meeting-ல் client சொன்னதை note எடுங்கள் (phone-ல் type பண்ணுங்கள்). அவங்க exact words important —
+                    "highest sales" or "most complete" or "any" — அது மட்டும் போதும்.
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            FMCG Mastering Project &nbsp;|&nbsp; Main UPC Business Rule Meeting Notes &nbsp;|&nbsp; February 2026<br>
+            <span style="margin-top:4px; display:block;">Print this page (Ctrl+P) to use during the meeting</span>
+        </div>
+
+    </div>
+</body>
+
+</html>

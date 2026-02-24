@@ -22,8 +22,14 @@ class LLMClient:
         # Primary: Azure Claude
         self.use_azure = True
         self.azure_endpoint = os.getenv("AZURE_CLAUDE_ENDPOINT")
+        
+        # Ensure endpoint has the path if it's just the base URL
+        if self.azure_endpoint and not self.azure_endpoint.endswith("/v1/messages"):
+            self.azure_endpoint = self.azure_endpoint.rstrip("/") + "/v1/messages"
+            
         self.azure_key = os.getenv("AZURE_CLAUDE_API_KEY")
         self.azure_model = os.getenv("AZURE_CLAUDE_MODEL_NAME", "claude-sonnet-4-5")
+        self.azure_api_version = os.getenv("AZURE_CLAUDE_API_VERSION", "2023-06-01")
 
         # Fallback: Azure OpenAI (CEO requirement - use Azure, not direct OpenAI)
         try:
@@ -76,7 +82,7 @@ class LLMClient:
                     headers = {
                         "x-api-key": self.azure_key,
                         "Content-Type": "application/json",
-                        "anthropic-version": "2023-06-01"
+                        "anthropic-version": self.azure_api_version
                     }
                     payload = {
                         "model": self.azure_model,

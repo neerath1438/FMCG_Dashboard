@@ -1,0 +1,1027 @@
+[
+  {
+    "ITEM": "ROMA COCONUT BISCUITS 300 GM",
+    "merge_items": [
+      "ROMA COCONUT BISCUITS 300 GM",
+      "ROMA COCONUT BISCUIT 300GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "300G"
+  },
+  {
+    "ITEM": "JULIES LEMOND CHOCOLATE 180G (10X18GM)",
+    "merge_items": [
+      "JULIES LEMOND CHOCOLATE 180G (10X18GM)",
+      "JULIES LEMOND CHOCOLATE 180G (18GM X10)"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "180G"
+  },
+  {
+    "ITEM": "NUTELLA GO 52G",
+    "merge_items": [
+      "NUTELLA GO 52G",
+      "NUTELLA GO 52GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "52G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS F/PACK CHOCOLATE SANDWICH 190 GM(19GM X 10)",
+    "merge_items": [
+      "MUNCHYS LEXUS F/PACK CHOCOLATE SANDWICH 190 GM(19GM X 10)",
+      "MUNCHYS LEXUS CHOCOLATE CREAM 190GM(19GM X 10)",
+      "MUNCHYS LEXUS CHOCOLATE SANDWICH 190GM(19GM X 10) INPACK 38GM",
+      "MUNCHYS LEXUS CHOCOLATE SANDWICH (CONTEST WIN T.VOHER) 190GM(19GMX10)",
+      "MUNCHYS LEXUS CHOCO 190G(19GX10)",
+      "MUNCHY'S LEXUX CHOCOLATE CREAM SANDWICH 190G (19GMX10)"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS S/WICH SALTED CHOC 190GM(19GM X 10)X12",
+    "merge_items": [
+      "MUNCHYS LEXUS S/WICH SALTED CHOC 190GM(19GM X 10)X12",
+      "MUNCHYS LEXUS SALTED CHOCOLATE SANDWICH 12S 190G(19GM X 10)"
+    ],
+    "flavour": "SALTED CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS LEMON S/WICH 12X190 GM(19GM X 10)",
+    "merge_items": [
+      "MUNCHYS LEXUS LEMON S/WICH 12X190 GM(19GM X 10)",
+      "MUNCHYS LEXUS LEMON SANDWICH 12X190GM(19GM X 10)"
+    ],
+    "flavour": "LEMON",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "KRAFT OREO CHOC CREME 137 GM",
+    "merge_items": [
+      "KRAFT OREO CHOC CREME 137 GM",
+      "KRAFT OREO SLUG CHOCOLATE137GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "137G"
+  },
+  {
+    "ITEM": "MUNCHY'S TOPMIX ASSORTED BISCUITS 12X 500 GM",
+    "merge_items": [
+      "MUNCHY'S TOPMIX ASSORTED BISCUITS 12X 500 GM",
+      "MUNCHY'S TOPMIX ASSORTED BISCUITS 12X500GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "500G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS S/WICH SALTED VANILLA 190G(19GM X 10)[X12]",
+    "merge_items": [
+      "MUNCHYS LEXUS S/WICH SALTED VANILLA 190G(19GM X 10)[X12]",
+      "MUNCHYS LEXUS SALTED VANILLA SANDWICH 12S 190G(19GM X 10)"
+    ],
+    "flavour": "SALTED VANILLA",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS SANDWICH CHOCOLATE 12X190GM(19GM X 10) 2280 GM",
+    "merge_items": [
+      "MUNCHYS LEXUS SANDWICH CHOCOLATE 12X190GM(19GM X 10) 2280 GM",
+      "MUNCHYS LEXUS CHOCOLATE CREAM 12X190GM(19GM X 10)"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "FAT SUNDAY CRUNCHY CHOC CHIPS 340G",
+    "merge_items": [
+      "FAT SUNDAY CRUNCHY CHOC CHIPS 340G",
+      "FAT SUNDAY CRUNCHY CHOC CHIPS 340GM"
+    ],
+    "flavour": "CHOCOLATE CHIP",
+    "variant": "REGULAR",
+    "size": "340G"
+  },
+  {
+    "ITEM": "LOACKER CREMKAKAO 45 GM",
+    "merge_items": [
+      "LOACKER CREMKAKAO 45 GM",
+      "LOACKER CREMKAKAO 45GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": null,
+    "size": "45G"
+  },
+  {
+    "ITEM": "MUNCHYS CREAM CRACKERS 12X300GM(25GM X 12)",
+    "merge_items": [
+      "MUNCHYS CREAM CRACKERS 12X300GM(25GM X 12)",
+      "MUNCHYS CREAM CRACKERS 12X 300 GM(25GM X 12)"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "3600G"
+  },
+  {
+    "ITEM": "POCKY STRAWBERRY FLAVOUR 38GX10",
+    "merge_items": [
+      "POCKY STRAWBERRY FLAVOUR 38GX10",
+      "GLICO POCKY BISCUIT S/BERRY STICK 10X38GM"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": "REGULAR",
+    "size": "380G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS SANDWICH CHEESE CREAM 190GM(19GM X 10)",
+    "merge_items": [
+      "MUNCHYS LEXUS SANDWICH CHEESE CREAM 190GM(19GM X 10)",
+      "MUNCHYS LEXUS CHEESE SANDWICH (CONTEST WIN TRL VHERS) 190GM(19GMX10)",
+      "MUNCHYS LEXUS SANDWICH CHEESE 190GM(19GM X 10)"
+    ],
+    "flavour": "CHEESE",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS VEGE CRACKERS 390GM(3X130G)X12",
+    "merge_items": [
+      "MUNCHYS VEGE CRACKERS 390GM(3X130G)X12",
+      "MUNCHYS VEGE CRACKERS 12 X 390GM(3X130G)"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "390G"
+  },
+  {
+    "ITEM": "ZESS ORIGINAL CREAM CRACKERS 430G",
+    "merge_items": [
+      "ZESS ORIGINAL CREAM CRACKERS 430G",
+      "ZESS CREAM CRACKERS ORIGINAL 430GM"
+    ],
+    "flavour": "ORIGINAL",
+    "variant": "REGULAR",
+    "size": "430G"
+  },
+  {
+    "ITEM": "HUP SENG PING PONG CREAM CRACKERS 428GM",
+    "merge_items": [
+      "HUP SENG PING PONG CREAM CRACKERS 428GM",
+      "HUP SENG PING PONG CREAM CREAKER 428GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "428G"
+  },
+  {
+    "ITEM": "JULIES SUGAR CRACKERS 343G",
+    "merge_items": [
+      "JULIES SUGAR CRACKERS 343G",
+      "JULIES SUGAR CRACKERS 343GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "343G"
+  },
+  {
+    "ITEM": "BOURBON PETIT CHEESE 40G",
+    "merge_items": [
+      "BOURBON PETIT CHEESE 40G",
+      "BOURBON PETIT CHEESE 40GM"
+    ],
+    "flavour": "CHEESE",
+    "variant": "REGULAR",
+    "size": "40G"
+  },
+  {
+    "ITEM": "GLICO POCKY STRAWBERRY FAMILY SET 21GMX8",
+    "merge_items": [
+      "GLICO POCKY STRAWBERRY FAMILY SET 21GMX8",
+      "POCKY FAMILY PACK STRAWBERRY 168G(21GM X 8)"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": "REGULAR",
+    "size": "168G"
+  },
+  {
+    "ITEM": "SKINNY BAKERS SALTED CRMEL CHOC CHIP COOKIES 150G",
+    "merge_items": [
+      "SKINNY BAKERS SALTED CRMEL CHOC CHIP COOKIES 150G",
+      "SKINNY BAKERS ALMOND CHOC CHIP COOKIES 150G"
+    ],
+    "flavour": "CHOCOLATE CHIP",
+    "variant": "REGULAR",
+    "size": "150G"
+  },
+  {
+    "ITEM": "SKINNY BAKERS CRNBERIES WHITE CHOC CHIP CKS 150G",
+    "merge_items": [
+      "SKINNY BAKERS CRNBERIES WHITE CHOC CHIP CKS 150G",
+      "SKINNY BAKERS MCDAMIA WHITE CHOC CHIP COOKIES 150G"
+    ],
+    "flavour": "WHITE CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "150G"
+  },
+  {
+    "ITEM": "SKINNY BAKERS COOKIE SLTED CRML CHOC CHIP CKS 80G",
+    "merge_items": [
+      "SKINNY BAKERS COOKIE SLTED CRML CHOC CHIP CKS 80G",
+      "SKINNY BAKERS COOKIE CRNBRIES WHT CHC CHIP CKS 80G"
+    ],
+    "flavour": "CHOCOLATE CHIP",
+    "variant": "REGULAR",
+    "size": "80G"
+  },
+  {
+    "ITEM": "ARNOTTS TIM TAM CARAMEL CHEW BISCUITS 175G",
+    "merge_items": [
+      "ARNOTTS TIM TAM CARAMEL CHEW BISCUITS 175G",
+      "ARNOTTS TIMTAM CARAMEL CHEWY BISC 175GM"
+    ],
+    "flavour": "CARAMEL",
+    "variant": "REGULAR",
+    "size": "175G"
+  },
+  {
+    "ITEM": "BANGKOK COOKIES RICE COOKIES ORIGINAL 100G",
+    "merge_items": [
+      "BANGKOK COOKIES RICE COOKIES ORIGINAL 100G",
+      "BANGKOK RICE COOKIE ORIGINAL 100G"
+    ],
+    "flavour": "ORIGINAL",
+    "variant": "REGULAR",
+    "size": "100G"
+  },
+  {
+    "ITEM": "APOLLO CHOCO WAFER STICK 11GM",
+    "merge_items": [
+      "APOLLO CHOCO WAFER STICK 11GM",
+      "APOLLO CHOCOLATE STICK WAFER 11GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "11G"
+  },
+  {
+    "ITEM": "APOLLO STICK WAFER STRAWBERRY 12X11GM",
+    "merge_items": [
+      "APOLLO STICK WAFER STRAWBERRY 12X11GM",
+      "APOLLO STRAWBERRY STICK WAFER 12X11GM"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": null,
+    "size": "132G"
+  },
+  {
+    "ITEM": "MEIJI HELLO PANDA S/BERRY F/P 260 GM(10X26GM)",
+    "merge_items": [
+      "MEIJI HELLO PANDA S/BERRY F/P 260 GM(10X26GM)",
+      "MEIJI HELLO PANDA STRAWBERRY 260GM(10X26GM)"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": "REGULAR",
+    "size": "260G"
+  },
+  {
+    "ITEM": "MR ITO CARUKET BORO 80GM",
+    "merge_items": [
+      "MR ITO CARUKET BORO 80GM",
+      "MR ITO CARUKET BORO 80G"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "80G"
+  },
+  {
+    "ITEM": "GLICO POCKY CHOCOLATE GOKUBOSO 71GM",
+    "merge_items": [
+      "GLICO POCKY CHOCOLATE GOKUBOSO 71GM",
+      "GLICO POCKY CHOCOLATE GOKUBOSO X LINE 71GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "GOKUBOSO",
+    "size": "71G"
+  },
+  {
+    "ITEM": "GLICO POCKY CACAO 60G",
+    "merge_items": [
+      "GLICO POCKY CACAO 60G",
+      "GLICO POCKY CACAO 60% 60GM"
+    ],
+    "flavour": "CACAO",
+    "variant": "60%",
+    "size": "60G"
+  },
+  {
+    "ITEM": "BOURBON TONYU NO WAFERS 107GM",
+    "merge_items": [
+      "BOURBON TONYU NO WAFERS 107GM",
+      "BOURBON TONYU NO WAFERS 107G"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "107G"
+  },
+  {
+    "ITEM": "BOURBON ALFORT MINI CHOCO VANILLA WHITE 53G",
+    "merge_items": [
+      "BOURBON ALFORT MINI CHOCO VANILLA WHITE 53G",
+      "BOURBON ALFORT MINI CHOCOLATE VANILLA WHITE 53G",
+      "BOURBON ALFORT MINI CHOCOLATE VANILLA WHITE 53GM"
+    ],
+    "flavour": "VANILLA WHITE",
+    "variant": "MINI",
+    "size": "53G"
+  },
+  {
+    "ITEM": "BOURBON CHOCO DIGESTIVE BISCUIT 98G",
+    "merge_items": [
+      "BOURBON CHOCO DIGESTIVE BISCUIT 98G",
+      "BOURBON CHOCOLATE DIGESTIVE BISCUITS 98G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "98G"
+  },
+  {
+    "ITEM": "BOURBON CARB BALANCE CHOCO CHIP COOKIES 104G",
+    "merge_items": [
+      "BOURBON CARB BALANCE CHOCO CHIP COOKIES 104G",
+      "BOURBON CARB BALANCE CHOCO CHIP COOKIES 104GM"
+    ],
+    "flavour": "CHOCOLATE CHIP",
+    "variant": "REGULAR",
+    "size": "104G"
+  },
+  {
+    "ITEM": "BOURBON CARB BALANCE TONYU KINAKO WAFERS 97G",
+    "merge_items": [
+      "BOURBON CARB BALANCE TONYU KINAKO WAFERS 97G",
+      "BOURBON CARB BALANCE TONYU KINAKO WAFERS 97GM"
+    ],
+    "flavour": "KINAKO",
+    "variant": "REGULAR",
+    "size": "97G"
+  },
+  {
+    "ITEM": "BOURBON RAISINNE 125G",
+    "merge_items": [
+      "BOURBON RAISINNE 125G",
+      "BOURBON RAISINNE 125GM"
+    ],
+    "flavour": "RAISIN",
+    "variant": "REGULAR",
+    "size": "125G"
+  },
+  {
+    "ITEM": "FURUTA CHOCO CHIP COOKIE 120G",
+    "merge_items": [
+      "FURUTA CHOCO CHIP COOKIE 120G",
+      "FURUTA CHOCO CHIP COOKIE 120GM"
+    ],
+    "flavour": "CHOCOLATE CHIP",
+    "variant": "REGULAR",
+    "size": "120G"
+  },
+  {
+    "ITEM": "HAMADA HONE NI CALCIUM WAFERS 12P 64GM",
+    "merge_items": [
+      "HAMADA HONE NI CALCIUM WAFERS 12P 64GM",
+      "HAMADA HONE NI CALCIUM WAFERS 12P 64G"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "64G"
+  },
+  {
+    "ITEM": "HAMADA CONFECT 20P TETSU PLUS COLLAGEN WAFER 160GM",
+    "merge_items": [
+      "HAMADA CONFECT 20P TETSU PLUS COLLAGEN WAFER 160GM",
+      "HAMADA CONFECT 20P TETSU PLUS COLLAGEN WAFER 160G"
+    ],
+    "flavour": "COLLAGEN",
+    "variant": "REGULAR",
+    "size": "160G"
+  },
+  {
+    "ITEM": "LOTTE TOPPO 72G",
+    "merge_items": [
+      "LOTTE TOPPO 72G",
+      "LOTTE TOPPO 72GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "72G"
+  },
+  {
+    "ITEM": "MCVITIES DIGESTIVE 400GM",
+    "merge_items": [
+      "MCVITIES DIGESTIVE 400GM",
+      "MCVITIES DIGESTIVE 400G"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "400G"
+  },
+  {
+    "ITEM": "THE FINE CHEESE CO LEMON SEASALT EVOO CRACKER 125GM",
+    "merge_items": [
+      "THE FINE CHEESE CO LEMON SEASALT EVOO CRACKER 125GM",
+      "THE FINE CHEESE CO LEMON SEASALT EVOO CRACKER 125G"
+    ],
+    "flavour": "LEMON",
+    "variant": "REGULAR",
+    "size": "125G"
+  },
+  {
+    "ITEM": "LOTUS BISCOFF ORIGINAL CARAMELISED 156GM",
+    "merge_items": [
+      "LOTUS BISCOFF ORIGINAL CARAMELISED 156GM",
+      "LOTUS BISCOFF ORI CARAMELISED 156GM"
+    ],
+    "flavour": "CARAMELISED",
+    "variant": "REGULAR",
+    "size": "156G"
+  },
+  {
+    "ITEM": "LOTTE ALMOND PEPERO 32G",
+    "merge_items": [
+      "LOTTE ALMOND PEPERO 32G",
+      "PEPERO ALMOND 32GM"
+    ],
+    "flavour": "ALMOND",
+    "variant": "REGULAR",
+    "size": "32G"
+  },
+  {
+    "ITEM": "OREO KNOT COOKIES CHOCOLATE 40G",
+    "merge_items": [
+      "OREO KNOT COOKIES CHOCOLATE 40G",
+      "OREO KNOT COOKIES CHOCOLATE 40GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "40G"
+  },
+  {
+    "ITEM": "TIGER BISKUAT CHOC JUMBO 364.8G",
+    "merge_items": [
+      "TIGER BISKUAT CHOC JUMBO 364.8G",
+      "TIGER BISKUAT CHOCOLATE JUMBO 364.8G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "JUMBO",
+    "size": "364.8G"
+  },
+  {
+    "ITEM": "MILKA CHOC&CHOC BISCUIT 150G",
+    "merge_items": [
+      "MILKA CHOC&CHOC BISCUIT 150G",
+      "MILKA CHOCO BISCUITS 150G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "150G"
+  },
+  {
+    "ITEM": "CHIPSMORE HAZELNUTS 153GM",
+    "merge_items": [
+      "CHIPSMORE HAZELNUTS 153GM",
+      "CHIPSMORE HAZELNUTS 153G"
+    ],
+    "flavour": "HAZELNUT",
+    "variant": "REGULAR",
+    "size": "153G"
+  },
+  {
+    "ITEM": "2194 LOACKER QUADRATINI NAPOLITANER 250G",
+    "merge_items": [
+      "2194 LOACKER QUADRATINI NAPOLITANER 250G",
+      "LOACKER QUADRATINI NAPOLITANER 250GM",
+      "LOACKER QUADRATINI PREMIUM NPLTNE 250G",
+      "LOACKER QUADRATINI NAPOLITANER 250G FOC 90G"
+    ],
+    "flavour": "NEAPOLITAN",
+    "variant": "REGULAR",
+    "size": "250G"
+  },
+  {
+    "ITEM": "LOACKER QUADRATINI PEANUT BUTTER 250G",
+    "merge_items": [
+      "LOACKER QUADRATINI PEANUT BUTTER 250G",
+      "LOACKER QUADRATINI PEANUT BUTTER 250G FOC 90G"
+    ],
+    "flavour": "PEANUT BUTTER",
+    "variant": "REGULAR",
+    "size": "250G"
+  },
+  {
+    "ITEM": "GULLON CHOC DIGESTIVE ROLL 300G",
+    "merge_items": [
+      "GULLON CHOC DIGESTIVE ROLL 300G",
+      "GULLON CHOCO DIGESTIVE ROLL 300GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "300G"
+  },
+  {
+    "ITEM": "LOTTE PEPERO WHITE COOKIES 32G",
+    "merge_items": [
+      "LOTTE PEPERO WHITE COOKIES 32G",
+      "LOTTE PEPERO WHITE COOKIES 32GM"
+    ],
+    "flavour": "WHITE",
+    "variant": "REGULAR",
+    "size": "32G"
+  },
+  {
+    "ITEM": "POCKY CHOCOLATE FLAVOUR 40GM",
+    "merge_items": [
+      "POCKY CHOCOLATE FLAVOUR 40GM",
+      "POCKY CHOCOLATE FLAVOUR 40 GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "40G"
+  },
+  {
+    "ITEM": "GLICO POCKY COOKIES & CREAM 40G",
+    "merge_items": [
+      "GLICO POCKY COOKIES & CREAM 40G",
+      "GLICO POCKY COOKIES & CREAM STICK 40G"
+    ],
+    "flavour": "COOKIES & CREAM",
+    "variant": "REGULAR",
+    "size": "40G"
+  },
+  {
+    "ITEM": "GLICO POCKY CHOCOLATE 47GM",
+    "merge_items": [
+      "GLICO POCKY CHOCOLATE 47GM",
+      "POCKY CHOCOLATE 47G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "47G"
+  },
+  {
+    "ITEM": "GLICO POCKY 45GM X1 STRAWBERRY",
+    "merge_items": [
+      "GLICO POCKY 45GM X1 STRAWBERRY",
+      "POCKY STRAWBERRY 45G"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": "REGULAR",
+    "size": "45G"
+  },
+  {
+    "ITEM": "POCKY STRAWBERRY 40GM",
+    "merge_items": [
+      "POCKY STRAWBERRY 40GM",
+      "POCKY STRAWBERRY FLAVOUR 40GM"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": null,
+    "size": "40G"
+  },
+  {
+    "ITEM": "POCKY DOUBLE CHOCO 39G",
+    "merge_items": [
+      "POCKY DOUBLE CHOCO 39G",
+      "POCKY DOUBLE CHOCOLATE 39G"
+    ],
+    "flavour": "DOUBLE CHOC",
+    "variant": null,
+    "size": "39G"
+  },
+  {
+    "ITEM": "LOTTE KOALA'S MARCH COOKIES CHOCOLATE 19.5GM X 10",
+    "merge_items": [
+      "LOTTE KOALA'S MARCH COOKIES CHOCOLATE 19.5GM X 10",
+      "LOTTE KOALA'S MARCH COOKIES CHOCOLATE 10X19.5GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "195G"
+  },
+  {
+    "ITEM": "ROMA MARIE SUSU 115G",
+    "merge_items": [
+      "ROMA MARIE SUSU 115G",
+      "ROMA MARIE SUSU 115GM"
+    ],
+    "flavour": "MILK",
+    "variant": "REGULAR",
+    "size": "115G"
+  },
+  {
+    "ITEM": "NYAM NYAM FANTASY STICK CHOCO 25GM",
+    "merge_items": [
+      "NYAM NYAM FANTASY STICK CHOCO 25GM",
+      "NYAM NYAM FANTASY STICK CHOCO 25G",
+      "NYAM NYAM FANTASY STICK SPA CHOCO 25GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "25G"
+  },
+  {
+    "ITEM": "MEIJI HELLO PANDA CHOC 43GM",
+    "merge_items": [
+      "MEIJI HELLO PANDA CHOC 43GM",
+      "MEIJI HELLO PANDA CHOCOLATE 43GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": null,
+    "size": "43G"
+  },
+  {
+    "ITEM": "MEIJI HELLO PANDA CHOCO 50GM",
+    "merge_items": [
+      "MEIJI HELLO PANDA CHOCO 50GM",
+      "MEIJI HELLO PANDA CHOC 50 GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "50G"
+  },
+  {
+    "ITEM": "MEIJI HELLO PANDA CHOCO FP 260GM(10X26GM)",
+    "merge_items": [
+      "MEIJI HELLO PANDA CHOCO FP 260GM(10X26GM)",
+      "MEIJI HELLO PANDA CHOCOLATE 260G(10X26GM)"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "260G"
+  },
+  {
+    "ITEM": "GERY SALUUT MALKIST CHOCOLATE 110GM",
+    "merge_items": [
+      "GERY SALUUT MALKIST CHOCOLATE 110GM",
+      "GERY SALUUT MALKIST CHOC 110G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "110G"
+  },
+  {
+    "ITEM": "GERY CHOCO CRACKERS 100GM (20GM X 5)",
+    "merge_items": [
+      "GERY CHOCO CRACKERS 100GM (20GM X 5)",
+      "GERY CHOCO CRACKERS 100GM(20GM X 5)"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "100G"
+  },
+  {
+    "ITEM": "NABATI NEXTAR BROWNIES CHOCOLATE 106G",
+    "merge_items": [
+      "NABATI NEXTAR BROWNIES CHOCOLATE 106G",
+      "NEXTAR CHOCOLATE 106G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "106G"
+  },
+  {
+    "ITEM": "MEIJI YAN YAN BISCT CREA CHOCOLATE 30G",
+    "merge_items": [
+      "MEIJI YAN YAN BISCT CREA CHOCOLATE 30G",
+      "MEIJI YAN YAN CHOCO 30G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "30G"
+  },
+  {
+    "ITEM": "MEIJI YAN YAN BISCT CRE STRAWBERRY 30G",
+    "merge_items": [
+      "MEIJI YAN YAN BISCT CRE STRAWBERRY 30G",
+      "MEIJI YAN YAN BISCT CREAM STRAWBERRY 30GM"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": "REGULAR",
+    "size": "30G"
+  },
+  {
+    "ITEM": "MEIJI LUCKY STICK CHOCOLATE 45G",
+    "merge_items": [
+      "MEIJI LUCKY STICK CHOCOLATE 45G",
+      "MEIJI LUCKY STICK CHOCOLATE 45 GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "45G"
+  },
+  {
+    "ITEM": "MEIJI LUCKY STICK STRAWBERRY 45G",
+    "merge_items": [
+      "MEIJI LUCKY STICK STRAWBERRY 45G",
+      "MEIJI LUCKY STICK STRAWBERRY45 GM"
+    ],
+    "flavour": "STRAWBERRY",
+    "variant": "REGULAR",
+    "size": "45G"
+  },
+  {
+    "ITEM": "RICHWELL CHOCOLATE COOKIES 160GM",
+    "merge_items": [
+      "RICHWELL CHOCOLATE COOKIES 160GM",
+      "RICHWELL COOKIES CHOCOLATE 160GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "160G"
+  },
+  {
+    "ITEM": "SNAX CRUNCHES CHEESE & ONION 160GM",
+    "merge_items": [
+      "SNAX CRUNCHES CHEESE & ONION 160GM",
+      "SNAX CRUNCHES CHEESE ONION 160GM"
+    ],
+    "flavour": "CHEESE & ONION",
+    "variant": "REGULAR",
+    "size": "160G"
+  },
+  {
+    "ITEM": "GPR MC OATY-RAISIN OAT COOKIES 108 GM",
+    "merge_items": [
+      "GPR MC OATY-RAISIN OAT COOKIES 108 GM",
+      "GPR HOMEMADE BUTTER COOKIES RAISIN 108GM"
+    ],
+    "flavour": "RAISIN",
+    "variant": "REGULAR",
+    "size": "108G"
+  },
+  {
+    "ITEM": "MYBIS FESTIVE 15 COOKIES 190G",
+    "merge_items": [
+      "MYBIS FESTIVE 15 COOKIES 190G",
+      "MYBIS FESTIVE 15 COOKIES 190GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "FESTIVE",
+    "size": "190G"
+  },
+  {
+    "ITEM": "GPR MCOATY BREAKFAST OAT COOKIES WITH CHOCO CHIPS 80G",
+    "merge_items": [
+      "GPR MCOATY BREAKFAST OAT COOKIES WITH CHOCO CHIPS 80G",
+      "GPR MCOATY BF OAT COOKIES CHOC CHIPS 80G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "80G"
+  },
+  {
+    "ITEM": "GH FOOD DIDI & FRIENDS BISCUIT CHOC 50GM",
+    "merge_items": [
+      "GH FOOD DIDI & FRIENDS BISCUIT CHOC 50GM",
+      "GH FOOD DIDI&FRIENDS CHOCOLATE BISCUIT 50GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "50G"
+  },
+  {
+    "ITEM": "ZESS CHOC SANDWICH 127.4GM",
+    "merge_items": [
+      "ZESS CHOC SANDWICH 127.4GM",
+      "ZESS CHOCOLATE SANDWICH 127.4GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "127.4G"
+  },
+  {
+    "ITEM": "JULIE'S CHEESE CRACKERS 100GM",
+    "merge_items": [
+      "JULIE'S CHEESE CRACKERS 100GM",
+      "JULIES CHEESE CRACKERS 100GM"
+    ],
+    "flavour": "CHEESE",
+    "variant": "REGULAR",
+    "size": "100G"
+  },
+  {
+    "ITEM": "JULIE'S SANDWICH CHEESE CONVI PACK (12X28G) 336G",
+    "merge_items": [
+      "JULIE'S SANDWICH CHEESE CONVI PACK (12X28G) 336G",
+      "JULIES CHEESE SANDWICH CONVI PACK 336GM (12X28GM)"
+    ],
+    "flavour": "CHEESE",
+    "variant": null,
+    "size": "336G"
+  },
+  {
+    "ITEM": "JULIE'S BUTTER CRACKERS 360G",
+    "merge_items": [
+      "JULIE'S BUTTER CRACKERS 360G",
+      "JULIE'S BUTTER CRACKERS 360GM"
+    ],
+    "flavour": "BUTTER",
+    "variant": null,
+    "size": "360G"
+  },
+  {
+    "ITEM": "HWA TAI MINI CRACKER CHEESE 350 GM",
+    "merge_items": [
+      "HWA TAI MINI CRACKER CHEESE 350 GM",
+      "HWA TAI MINI CRACKER CHEESE 350G"
+    ],
+    "flavour": "CHEESE",
+    "variant": null,
+    "size": "350G"
+  },
+  {
+    "ITEM": "LEE PEANUT CREAM CRACKERS 550GM(20X27.5GM)",
+    "merge_items": [
+      "LEE PEANUT CREAM CRACKERS 550GM(20X27.5GM)",
+      "LEE PEANUT CREAM CRACKERS 550 GM(20X27.5GM)"
+    ],
+    "flavour": "PEANUT",
+    "variant": "REGULAR",
+    "size": "550G"
+  },
+  {
+    "ITEM": "LEE ORIGINAL CRACKER M/P 308G(22GM X 14)",
+    "merge_items": [
+      "LEE ORIGINAL CRACKER M/P 308G(22GM X 14)",
+      "LEE ORIGINAL CRACKER M/P 308GM(22GM X 14)"
+    ],
+    "flavour": "ORIGINAL",
+    "variant": "REGULAR",
+    "size": "308G"
+  },
+  {
+    "ITEM": "MUNCHY MUZIC CHOCOLATE WAFER CUBES 180GM",
+    "merge_items": [
+      "MUNCHY MUZIC CHOCOLATE WAFER CUBES 180GM",
+      "MUNCHY MUZIC CHOCO WAFER 180 GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "180G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS PEANUT BUTTER 190GM(19GM X 10)",
+    "merge_items": [
+      "MUNCHYS LEXUS PEANUT BUTTER 190GM(19GM X 10)",
+      "MUNCHYS LEXUS PEANUT BUTTER SWICH (CONTEST WIN T.VOU) 190G(19GX10)",
+      "MUNCHYS LEXUS PEANUT BUTTER SWICH 190G(19GX10)",
+      "LEXUS PEANUT BUTTER SANDWICH 190GM(10X19G)",
+      "MUNCHYS LEXUS FMP PEANUT BUTTER 190 GM(19GM X 10)"
+    ],
+    "flavour": "PEANUT BUTTER",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS SUGAR CRACKERS 390GM (3X130G)",
+    "merge_items": [
+      "MUNCHYS SUGAR CRACKERS 390GM (3X130G)",
+      "MUNCHYS SUGAR CRACKERS 390G (3X130G)"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "390G"
+  },
+  {
+    "ITEM": "MUNCHYS OAT KRUNCH DARK CHOC PACK 208GM(26GM X 8)",
+    "merge_items": [
+      "MUNCHYS OAT KRUNCH DARK CHOC PACK 208GM(26GM X 8)",
+      "MUNCHYS OAT KRUNCH DARK CHOCOLATE 208GM(26GM X 8)"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "208G"
+  },
+  {
+    "ITEM": "MUNCHYS OATKRUNCH DARK CHOCO 390G(15X26GM)",
+    "merge_items": [
+      "MUNCHYS OATKRUNCH DARK CHOCO 390G(15X26GM)",
+      "MUNCHYS OATKRUNCH DARK CHOCO 390GM(15X26GM)",
+      "MUNCHYS OATKRUNCH NUTTY CHOCO 390GM(15X26GM)",
+      "MUNCHYS OATKRUNCH NUTTY CHOCO 390G(15X26GM)"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "390G"
+  },
+  {
+    "ITEM": "MUNCHYS OAT KRUNCH DARK CHOCOLATE 26GMX16S 416 GM",
+    "merge_items": [
+      "MUNCHYS OAT KRUNCH DARK CHOCOLATE 26GMX16S 416 GM",
+      "MUNCHYS OAT KRUNCH DARK CHOC 26GMX16S 416GM"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "416G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS PEANUT BUTTER SANDWICH 190GM(19GM X 10) INPACK 38GM",
+    "merge_items": [
+      "MUNCHYS LEXUS PEANUT BUTTER SANDWICH 190GM(19GM X 10) INPACK 38GM",
+      "MUNCHYS LEXUS P/BUTTER 190G(19GX10)"
+    ],
+    "flavour": "PEANUT BUTTER",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS CHEESE SANDWICH 190GM(19GM X 10) INPACK 38GM",
+    "merge_items": [
+      "MUNCHYS LEXUS CHEESE SANDWICH 190GM(19GM X 10) INPACK 38GM",
+      "MUNCHYS LEXUS CHEESE 190G(19GX10)"
+    ],
+    "flavour": "CHEESE",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS CHOCOLATE SANDWICH 12SX38G (CONTEST WIN T VHERS) 456GM",
+    "merge_items": [
+      "MUNCHYS LEXUS CHOCOLATE SANDWICH 12SX38G (CONTEST WIN T VHERS) 456GM",
+      "MUNCHYS LEXUS CHOCOLATE SANDWICH 12SX38G 456G"
+    ],
+    "flavour": "CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "456G"
+  },
+  {
+    "ITEM": "LEXUS SALTED CHOC S/BISCUITS 190GM(19GM X 10)",
+    "merge_items": [
+      "LEXUS SALTED CHOC S/BISCUITS 190GM(19GM X 10)",
+      "MUNCHYS LEXUS SALTED CHOCOLATE SANDWICH 190G(19GM X 10)"
+    ],
+    "flavour": "SALTED CHOCOLATE",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MUNCHYS LEXUS SALTED VANILLA SANDWICH 190GM(19GM X 10) INP 2X19GM 228G",
+    "merge_items": [
+      "MUNCHYS LEXUS SALTED VANILLA SANDWICH 190GM(19GM X 10) INP 2X19GM 228G",
+      "MUNCHYS LEXUS SALTED VANILLA SANDWICH 190GM(19GM X 10)",
+      "MUNCHY'S LEXUS SALTED VANILLA 190GM(19GMX10)"
+    ],
+    "flavour": "SALTED VANILLA",
+    "variant": "REGULAR",
+    "size": "190G"
+  },
+  {
+    "ITEM": "MORRIS BIG MARIE 300GM",
+    "merge_items": [
+      "MORRIS BIG MARIE 300GM",
+      "MORRIS BIG MARIE 300 GM"
+    ],
+    "flavour": "NORMAL",
+    "variant": "REGULAR",
+    "size": "300G"
+  },
+  {
+    "ITEM": "ORI BISCUIT CHOCOLATE CHIP COOKIES 510GM",
+    "merge_items": [
+      "ORI BISCUIT CHOCOLATE CHIP COOKIES 510GM",
+      "ORI BISCUIT CHOCOLATE CHIP COOKIES 510G"
+    ],
+    "flavour": "CHOCOLATE CHIP",
+    "variant": "REGULAR",
+    "size": "510G"
+  },
+  {
+    "ITEM": "WHITE CASTLE BUTTER COOKIES 90 GM",
+    "merge_items": [
+      "WHITE CASTLE BUTTER COOKIES 90 GM",
+      "WHITE CASTLE BUTTER COOKIES 90G"
+    ],
+    "flavour": "BUTTER",
+    "variant": "REGULAR",
+    "size": "90G"
+  },
+  {
+    "ITEM": "WHITE CASTLE DBL CHOCOLATE CHIPS 180G",
+    "merge_items": [
+      "WHITE CASTLE DBL CHOCOLATE CHIPS 180G",
+      "WHITE CASTLE DBL CHOCOLATE CHIPS 180GM"
+    ],
+    "flavour": "CHOCOLATE CHIP",
+    "variant": "DOUBLE",
+    "size": "180G"
+  }
+]

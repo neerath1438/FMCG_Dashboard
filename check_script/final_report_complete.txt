@@ -1,0 +1,356 @@
+
+==================================================
+      --- FINAL DATA QUALITY REPORT ---
+==================================================
+
+1. CHECKING NYAM NYAM (UPC: 8886015402037)
+   [SUCCESS] Found 66 distinct master items for Nyam Nyam UPC.
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: STICK        | ITEM: ARNOTT'S NYAM NYAM FANTASY STICK 22.5 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+   - FORM: RICE CRISPY  | ITEM: ARNOTT'S NYAM NYAM SUGAR RICE 27 GM
+
+2. GLOBAL PRODUCT FORM DISTRIBUTION
+   FORM                 | TOTAL ITEMS
+   -----------------------------------
+   BISCUIT              | 63030
+   COOKIE               | 31074
+   WAFER                | 19008
+   NULL (PROBLEM)       | 9072
+   CRACKER              | 7116
+   STICK                | 6516
+   ROLL                 | 5850
+   SANDWICH             | 5136
+   CRACKERS             | 5118
+   RICE CRISPY          | 1368
+   POUCH                | 990
+   UNIT                 | 840
+   TART                 | 738
+   RICE CRACKER         | 630
+   PUFF                 | 618
+   CREAM                | 606
+   MULTIPACK            | 576
+   SNACK                | 552
+   FINGERS              | 450
+   UNKNOWN              | 378
+   CRISPS               | 342
+   CHIPS                | 288
+   PRETZEL              | 282
+   BAR                  | 234
+   CRISP                | 228
+   RICE CRACKERS        | 228
+   PRETZ                | 222
+   CUP                  | 216
+   CUBE                 | 216
+   COATED               | 204
+   THINS                | 192
+   SWICH                | 174
+   JAM                  | 150
+   BALL                 | 144
+   SHORTCAKE            | 138
+   WAFFLE               | 132
+   KUIH                 | 132
+   FAMILY PACK          | 126
+   TARTS                | 126
+   TIN                  | 126
+   CRISPBREAD           | 120
+   RICE CAKE            | 120
+   BITES                | 108
+   CREPE                | 108
+   DONUT                | 102
+   BOTTLE               | 102
+   SENBEI               | 102
+   BUTTER               | 96
+   SQUARE               | 96
+   RICE CAKES           | 96
+   RUSK                 | 96
+   ASSORTED             | 90
+   BREAD                | 90
+   CAN                  | 90
+   TRAY                 | 84
+   MINIS                | 84
+   BOX                  | 84
+   CRACKER SANDWICH     | 78
+   LOVE LETTER          | 72
+   CEREAL               | 72
+   GRAIN                | 72
+   TUBE                 | 72
+   CREAMS               | 72
+   CHP                  | 66
+   BROWNIE              | 66
+   TWIST                | 66
+   SNACKS               | 60
+   BAG                  | 60
+   COLLON               | 60
+   TARTELETTE           | 60
+   VITAMINS MINERAL     | 60
+   TWISTS               | 60
+   CRUNCH               | 54
+   SAUCE                | 48
+   Standardized Form (e.g., STICK, WAFER, BISCUIT, RICE CRISPY, ROLL) | 48
+   NUT THINS            | 48
+   CAKE                 | 48
+   CRACKERTHINS         | 48
+   GIFT PACK            | 48
+   GIFT BOX             | 48
+   FINGER               | 48
+   PASTRY               | 48
+   COCOA CREAM          | 48
+   SNACKERS             | 42
+   N/A                  | 42
+   FILL                 | 42
+   SANDWICH CRACKER     | 42
+   PIE                  | 42
+   CRUNCHES             | 42
+   BREAKFAST            | 42
+   MELTS                | 42
+   ICE                  | 36
+   ROUNDS               | 36
+   PUFFS                | 36
+   GRISSINI             | 36
+   CORN CAKES           | 36
+   FLATBREAD            | 36
+   MID PACK             | 36
+   TRIANGLES            | 36
+   POPTARTS             | 36
+   PRETZELS             | 36
+   FLAT BREAD           | 36
+   CONE                 | 36
+   NUTS                 | 36
+   CRUNCHY              | 36
+   OAT                  | 36
+   OATMEAL              | 36
+   ALMOND & PRETZEL     | 36
+   BEAR                 | 36
+   KIT                  | 36
+   SHORT CAKE           | 30
+   PRALINES             | 30
+   JUMBO PACK           | 30
+   JELLY                | 30
+   HORN                 | 30
+   THIN THIN            | 30
+   BAKED SNACK CRACKERS | 30
+   KISSES               | 30
+   SLICE                | 30
+   TOAST                | 30
+   JUMBO                | 30
+   BRAN                 | 30
+   PILLOW               | 24
+   SQUARES              | 24
+   CORNFLAKES           | 24
+   CHEESE               | 24
+   DRUM                 | 24
+   SNACK CUP            | 24
+   PUFF PASTRY          | 24
+   ALMOND               | 24
+   YOGURT               | 24
+   SESAMEAL             | 24
+   DORAYAKI             | 24
+   BITE                 | 24
+   SOUR DOUGH           | 24
+   CEREALE              | 24
+   LOVE LETTERS         | 24
+   CRM                  | 24
+   CADDY                | 24
+   BARS                 | 24
+   COMBO                | 24
+   CREME                | 24
+   MINI BITE            | 24
+   KRIM                 | 24
+   DIP                  | 24
+   WAFERSTICK           | 24
+   M&P                  | 24
+   CONFLAKES            | 24
+   MINI                 | 24
+   BROWNIES             | 24
+   CRUMBLES             | 24
+   PASTRIES             | 24
+   SNACK PACK           | 24
+   CORN THINS           | 24
+   SHORTBREAD           | 24
+   CREAM SAN            | 24
+   STRAW                | 24
+   BOLO                 | 24
+   SNACK BITES          | 24
+   PACK                 | 18
+   KUEH                 | 18
+   MILK                 | 18
+   SACHET               | 18
+   WAFER STICK          | 18
+   NYAM NYAM            | 18
+   SMALL PACK           | 18
+   BUTTON               | 18
+   BOMB CORN            | 18
+   DRUMSTICK            | 18
+   FISH                 | 18
+   PEA                  | 18
+   QUADROPACK           | 18
+   DROPS                | 18
+   BREAD ROUNDS         | 18
+   PLANE                | 18
+   SW                   | 18
+   SWITCH               | 18
+   MULTI PACK           | 18
+   PAPIRO               | 18
+   CHOC CHIPS           | 18
+   SAVOURY              | 18
+   BRITTLE              | 12
+   NIBBLE               | 12
+   FLAKES               | 12
+   MACARON              | 12
+   LETTER               | 12
+   POKEMON              | 12
+   PANETTONE            | 12
+   PEANUTBUTTER         | 12
+   DIY                  | 12
+   PILLOWS              | 12
+   MINI BITES           | 12
+   TOASTED CHIP         | 12
+   PASTIES              | 12
+   PIECES               | 12
+   SQUID                | 12
+   MEDLEY               | 12
+   MIND FLEX            | 12
+   PIAH                 | 12
+   YOGURT BREAK         | 12
+   TOY                  | 12
+   QI MA                | 12
+   LAYER CAKE           | 12
+   CREPES               | 12
+   BISCUIT STICK        | 12
+   BORO                 | 12
+   RICE BITES           | 12
+   CRUSH                | 12
+   SOURDOUGH            | 12
+   DRINK                | 12
+   PIECE                | 12
+   BREADSTICK           | 12
+   SALT                 | 12
+   MACAROON             | 12
+   WHEAT BRAN           | 12
+   GATEAU               | 12
+   CHOCOLATE CHIP       | 12
+   MAKE                 | 12
+   RICE                 | 12
+   OLIVE OIL            | 12
+   HARDTACK             | 12
+   CRUSTINI             | 12
+   MULTIGRAIN           | 12
+   STRIP                | 12
+   HEX BOX              | 12
+   VALUE PACK           | 12
+   CRISP BREAD          | 12
+   CHOCOLATE CHIPS      | 12
+   SMOOTH               | 12
+   FUDGE                | 12
+   WAFER ROLL           | 12
+   FINELY MINCED        | 12
+   RICE YAKI            | 12
+   CHOCOLATE            | 12
+   R.TIN                | 12
+   CRISPY               | 12
+   TRUFFLE              | 12
+   RICE FLAKES          | 12
+   COFFEE               | 12
+   BITE SIZE            | 12
+   SPIRALS              | 12
+   SLUG                 | 12
+   BING                 | 12
+   DENTELLE             | 12
+   SLCTION              | 12
+   CHOC CHIP            | 12
+   WHEEL                | 12
+   SESAME               | 12
+   CEREALS              | 12
+   COMBO PACK           | 12
+   POPTART              | 12
+   NUT CRACKER          | 12
+   CLUB                 | 12
+   BROKEN               | 12
+   DOUGHNUTS            | 12
+   OIL                  | 12
+   MIX RICE             | 12
+   PCS                  | 12
+   CRC                  | 12
+   TUB                  | 12
+   SNAPS                | 12
+   BAUBLE               | 12
+   NOODLE               | 12
+   MORSELS              | 12
+   SABLE                | 12
+   SAN                  | 12
+   BARREL               | 12
+   RICE CRUST           | 12
+   SHELLS               | 12
+   ROUND                | 12
+   CRACK                | 6
+   RING                 | 6
+
+3. [WARNING] Still found 9072 items with NULL form. Please check cache.
+
+==================================================
+      Verification Done. Ready for Delivery!
+==================================================
+

@@ -1,0 +1,32 @@
+[
+  {
+    "original": "BOURBON BUTTER COOKIES 9PCS 100G",
+    "result": {
+      "brand": "BOURBON",
+      "product_line": null,
+      "flavour": "BUTTER",
+      "variant": "REGULAR",
+      "product_form": "BISCUIT",
+      "is_sugar_free": false,
+      "size": "100G",
+      "base_item": "BOURBON BISCUIT NORMAL 100G",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  },
+  {
+    "original": "BOURBON BUTTER COOKIES 100G",
+    "result": {
+      "brand": "BOURBON",
+      "product_line": null,
+      "flavour": "BUTTER",
+      "variant": "REGULAR",
+      "product_form": "BISCUIT",
+      "is_sugar_free": false,
+      "size": "100G",
+      "base_item": "BOURBON BISCUIT NORMAL 100G",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  }
+]

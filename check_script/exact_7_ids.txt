@@ -1,0 +1,29 @@
+=== EXACT MONGO QUERIES FOR 7-RECORD GAP PROOF ===
+
+--- CATEGORY 1: DROPPED (3 Records) ---
+db.raw_data.find({"_id": ObjectId("698093668daf39588e7441fe")})
+db.raw_data.find({"_id": ObjectId("698093668daf39588e7441ff")})
+db.raw_data.find({"_id": ObjectId("698093668daf39588e744200")})
+
+--- CATEGORY 2: MERGED REDUCTIONS (4 Records Gap) ---
+// Product: APOLLO STICK WAFER STRAWBERRY 12X11GM (UPC: 726165121045) | Raw Count: 5 -> Merged to 1
+db.raw_data.find({"_id": ObjectId("698093648daf39588e71bc44")})
+db.raw_data.find({"_id": ObjectId("698093648daf39588e71bc66")})
+db.raw_data.find({"_id": ObjectId("698093648daf39588e71bc7c")})
+db.raw_data.find({"_id": ObjectId("698093648daf39588e71bc96")})
+db.raw_data.find({"_id": ObjectId("698093648daf39588e71bcb0")})
+// Product: POCKY STRAWBERRY 40GM (UPC: 8851019310206) | Raw Count: 4 -> Merged to 1
+db.raw_data.find({"_id": ObjectId("698093658daf39588e728f96")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e728fb6")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e728fce")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e728fe0")})
+// Product: POCKY DOUBLE CHOCO 39G (UPC: 8851019310244) | Raw Count: 4 -> Merged to 1
+db.raw_data.find({"_id": ObjectId("698093658daf39588e729032")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e729066")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72907c")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72909c")})
+// Product: MEIJI HELLO PANDA CHOC 43GM (UPC: 8888077102023) | Raw Count: 4 -> Merged to 1
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72a95e")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72a980")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72a994")})
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72a9ca")})

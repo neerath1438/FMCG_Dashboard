@@ -11,6 +11,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 const Products = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const confidenceStatusParam = searchParams.get('confidence_status') || 'all';
+    const viewParam = searchParams.get('view'); // 'filtered' or null
     const brandParam = searchParams.get('brand');
 
     const [products, setProducts] = useState([]);
@@ -22,6 +23,7 @@ const Products = () => {
     const [hasMore, setHasMore] = useState(true);
     const [skip, setSkip] = useState(0);
     const [viewMode, setViewMode] = useState('grid');
+    const [isFilteredView, setIsFilteredView] = useState(false);
     const limit = 100;
     const navigate = useNavigate();
 
@@ -34,33 +36,60 @@ const Products = () => {
 
     useEffect(() => {
         fetchInitialData();
-    }, [confidenceStatusParam]);
+    }, [confidenceStatusParam, viewParam]);
 
     // Re-fetch products when filters change after a small delay
     useEffect(() => {
+        // Skip auto-refresh if in filtered view
+        if (isFilteredView) return;
+
         const delayDebounceFn = setTimeout(() => {
             fetchProducts(true);
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, filterBrand]);
+    }, [searchTerm, filterBrand, isFilteredView]);
 
     const fetchInitialData = async () => {
         try {
             setLoading(true);
-            const [productsData, brandsData] = await Promise.all([
-                dashboardAPI.getProducts(limit, 0, searchTerm, filterBrand, confidenceStatusParam),
-                dashboardAPI.getBrands()
-            ]);
 
-            // Products
-            const pResponse = productsData?.data || productsData;
-            setProducts(pResponse?.products || pResponse);
-            setHasMore(pResponse?.total > limit);
-            setSkip(limit);
+            // Check if we're in filtered view
+            if (viewParam === 'filtered') {
+                setIsFilteredView(true);
+                const filteredData = await dashboardAPI.getFilteredRecords();
+                setProducts(filteredData.records || []);
+                setHasMore(false); // No pagination for filtered view
 
-            // Brands
-            setBrands(brandsData?.brands || []);
+                // Still fetch brands for filter dropdown
+                const brandsData = await dashboardAPI.getBrands();
+                setBrands(brandsData?.brands || []);
+            } else if (viewParam === 'merged') {
+                // Merged products view
+                setIsFilteredView(true); // Disable auto-refresh
+                const mergedData = await dashboardAPI.getMergedProducts();
+                setProducts(mergedData.products || []);
+                setHasMore(false); // No pagination for merged view
+
+                // Still fetch brands for filter dropdown
+                const brandsData = await dashboardAPI.getBrands();
+                setBrands(brandsData?.brands || []);
+            } else {
+                setIsFilteredView(false);
+                const [productsData, brandsData] = await Promise.all([
+                    dashboardAPI.getProducts(limit, 0, searchTerm, filterBrand, confidenceStatusParam),
+                    dashboardAPI.getBrands()
+                ]);
+
+                // Products
+                const pResponse = productsData?.data || productsData;
+                setProducts(pResponse?.products || pResponse);
+                setHasMore(pResponse?.total > limit);
+                setSkip(limit);
+
+                // Brands
+                setBrands(brandsData?.brands || []);
+            }
         } catch (error) {
             console.error('Error fetching initial data:', error);
         } finally {
@@ -102,6 +131,9 @@ const Products = () => {
         setSearchTerm('');
         setFilterBrand('all');
         setSearchParams({});
+        if (isFilteredView) {
+            navigate('/products'); // Navigate back to normal view
+        }
     };
 
     const columns = [
@@ -140,6 +172,42 @@ const Products = () => {
 
     return (
         <div className="space-y-6">
+            {/* Filtered View Banner */}
+            {isFilteredView && viewParam === 'filtered' && (
+                <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                            <Filter size={18} className="text-indigo-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-indigo-900">Viewing Filtered Records</p>
+                            <p className="text-xs text-indigo-700">Showing {products.length} records that were filtered out from raw data.</p>
+                        </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleClearFilters} className="bg-white">
+                        Back to All Products
+                    </Button>
+                </div>
+            )}
+
+            {/* Merged Products Banner */}
+            {isFilteredView && viewParam === 'merged' && (
+                <div className="bg-purple-50 border border-purple-100 p-4 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                            <Filter size={18} className="text-purple-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-purple-900">Viewing Merged Products</p>
+                            <p className="text-xs text-purple-700">Showing {products.length} products that were created by merging multiple records. Each product shows its merge rule.</p>
+                        </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleClearFilters} className="bg-white">
+                        Back to All Products
+                    </Button>
+                </div>
+            )}
+
             {/* Confidence Status Banner */}
             {confidenceStatusParam === 'na' && (
                 <div className="bg-pink-50 border border-pink-100 p-4 rounded-2xl flex items-center justify-between">

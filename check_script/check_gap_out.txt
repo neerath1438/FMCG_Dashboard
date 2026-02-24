@@ -1,0 +1,9 @@
+﻿Total unique 7-Eleven GTINs: 3220
+Total Carried (910): 910
+
+=== Match Level Breakdown ===
+L1 (Direct UPC = GTIN match):       820
+L2 (Attribute/merged_upcs match):   90
+L3 (Not implemented separately):    0
+Total Carried:                      910
+Not Carried (Gap):                  6282

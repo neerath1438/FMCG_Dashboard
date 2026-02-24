@@ -1,0 +1,32 @@
+[
+  {
+    "original": "BIOGREEN O`SOY CRACKER 16X30GM",
+    "result": {
+      "brand": "BIOGREEN",
+      "product_line": "OSOY",
+      "flavour": "NORMAL",
+      "variant": "REGULAR",
+      "product_form": "CRACKER",
+      "is_sugar_free": false,
+      "size": "480G",
+      "base_item": "BIOGREEN O`SOY CRACKER NORMAL REGULAR 480G",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  },
+  {
+    "original": "BIOGREEN O'SOY CRACKERS 16X30G",
+    "result": {
+      "brand": "BIOGREEN",
+      "product_line": "OSOY",
+      "flavour": "NORMAL",
+      "variant": "REGULAR",
+      "product_form": "CRACKER",
+      "is_sugar_free": false,
+      "size": "480G",
+      "base_item": "BIOGREEN O'SOY CRACKER NORMAL REGULAR 480G",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  }
+]

@@ -1,0 +1,18 @@
+=== LLM CACHE CHECK FOR SIZE-BASED MERGING ===
+[NYAM NYAM RICE CRISPY 18GM] (Matched: NYAM NYAM RICE CRISPY 18GM)
+  base_item: ARNOTTS NYAM NYAM RICE CRISPY 18G
+  flavour:   RICE CRISPY
+  size:      18G
+--------------------
+[ARNOTT'S NYAM NYAM RICE CRISPY 22 GM] (Matched: ARNOTT'S NYAM NYAM RICE CRISPY 22 GM)
+  base_item: ARNOTTS NYAM NYAM RICE CRISPY 22G
+  flavour:   RICE CRISPY
+  size:      22G
+--------------------
+[NYAM NYAM RICE CRISPY 22G] NOT FOUND IN CACHE
+--------------------
+[NYAMNYAM RICE CRISPY 25GM] (Matched: NYAMNYAM RICE CRISPY 25GM)
+  base_item: ARNOTTS NYAMNYAM RICE CRISPY 25G
+  flavour:   RICE CRISPY
+  size:      25G
+--------------------

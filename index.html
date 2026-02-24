@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FMCG Dashboard - Overview</title>
+    <link rel="stylesheet" href="static/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">📦</div>
+                <h2>FMCG</h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📦</span>
+                    <span>Products</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">🔄</span>
+                    <span>Export</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>Alerts</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📈</span>
+                    <span>Reports</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">💬</span>
+                    <span>Messages</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>FMCG Dashboard</h1>
+                    <p class="subtitle">DASHBOARD / OVERVIEW</p>
+                </div>
+                <div class="header-right">
+                    <button class="icon-btn">🔍</button>
+                    <button class="icon-btn notification-btn">
+                        🔔
+                        <span class="badge">3</span>
+                    </button>
+                    <div class="user-avatar">RA</div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Top Section -->
+                <div class="top-section">
+                    <div class="welcome-card">
+                        <h2>Comprehensive overview of your product portfolio, key performance metrics, and recent
+                            activity.</h2>
+                        <div class="action-buttons">
+                            <button class="btn btn-success">
+                                <span>⬇️</span> Merged
+                            </button>
+                            <button class="btn btn-primary">
+                                <span>⬇️</span> Single
+                            </button>
+                            <button class="btn btn-warning">
+                                <span>⬇️</span> Low Conf
+                            </button>
+                            <button class="btn btn-danger">
+                                <span>⬇️</span> Full Export
+                            </button>
+                            <button class="btn btn-secondary">
+                                <span>🔄</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product Intelligence Alert -->
+                    <div class="alert-card">
+                        <div class="alert-icon">🧠</div>
+                        <div class="alert-content">
+                            <h3>Product Intelligence</h3>
+                            <p class="alert-status">Current Status</p>
+                            <p class="alert-message" id="alertMessage">Loading...</p>
+                            <a href="#" class="alert-link">View Details →</a>
+                        </div>
+                    </div>
+
+                    <!-- AI Illustration -->
+                    <div class="ai-illustration">
+                        <div class="ai-glow"></div>
+                        <div class="ai-icon">🤖</div>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-badge success">100%</div>
+                        <div class="stat-label">INPUT ROWS</div>
+                        <div class="stat-value" id="inputRows">Loading...</div>
+                        <div class="stat-sub">SINGLE_STOCK</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-badge info">4%</div>
+                        <div class="stat-label">ITEMS MERGED</div>
+                        <div class="stat-value" id="itemsMerged">Loading...</div>
+                        <div class="stat-sub" id="reductionPct">4% Reduction</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-badge success">100%</div>
+                        <div class="stat-label">OUTPUT ROWS</div>
+                        <div class="stat-value" id="outputRows">Loading...</div>
+                        <div class="stat-sub">MASTER_STOCK</div>
+                    </div>
+                </div>
+
+                <!-- Detail Cards -->
+                <div class="detail-cards">
+                    <!-- Products Card (Clickable) -->
+                    <div class="detail-card products-card" onclick="navigateToAudit()">
+                        <div class="card-header success">
+                            <span>📈</span>
+                            <h3>Products</h3>
+                            <span class="badge-pill">Overview</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <tr>
+                                    <td>Input Rows</td>
+                                    <td class="value" id="productsInputRows">Loading...</td>
+                                </tr>
+                                <tr>
+                                    <td>Output Rows</td>
+                                    <td class="value" id="productsOutputRows">Loading...</td>
+                                </tr>
+                                <tr>
+                                    <td>Unique UPCs</td>
+                                    <td class="value" id="uniqueUPCs">Loading...</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Merge Status Card -->
+                    <div class="detail-card">
+                        <div class="card-header info">
+                            <span>⚡</span>
+                            <h3>Merge Status</h3>
+                            <span class="badge-pill">Health Check</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <tr>
+                                    <td>Merged</td>
+                                    <td class="value" id="mergedCount">Loading...</td>
+                                </tr>
+                                <tr>
+                                    <td>Single</td>
+                                    <td class="value" id="singleCount">0</td>
+                                </tr>
+                                <tr>
+                                    <td>Unique Brands</td>
+                                    <td class="value" id="uniqueBrands">Loading...</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- System Management Card -->
+                    <div class="detail-card">
+                        <div class="card-header warning">
+                            <span>🔧</span>
+                            <h3>System Management</h3>
+                            <span class="badge-pill">Admin</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-description">
+                                Perform a complete reset to clear all data and AI memory for a 100% fresh start.
+                            </p>
+                            <button class="btn-reset">
+                                <span>🔄</span> Full Reset & Clear Cache
+                            </button>
+                            <p class="card-note">Quick Reset (Keep Cache)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="static/js/dashboard.js"></script>
+</body>
+
+</html>

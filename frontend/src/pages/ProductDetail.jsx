@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Package } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -10,18 +10,23 @@ import { dashboardAPI } from '../services/api';
 
 const ProductDetail = () => {
     const { mergeId } = useParams();
+    const [searchParams] = useSearchParams();
+    const isRawProduct = searchParams.get('raw') === 'true';
     const navigate = useNavigate();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchProduct();
-    }, [mergeId]);
+    }, [mergeId, isRawProduct]);
 
     const fetchProduct = async () => {
         try {
             setLoading(true);
-            const data = await dashboardAPI.getProduct(mergeId);
+            // Fetch from raw_data if raw param is true, otherwise from master_stock_data
+            const data = isRawProduct
+                ? await dashboardAPI.getRawProduct(mergeId)
+                : await dashboardAPI.getProduct(mergeId);
             setProduct(data);
         } catch (error) {
             console.error('Error fetching product:', error);
@@ -70,6 +75,19 @@ const ProductDetail = () => {
                 </Button>
             </div>
 
+            {/* Raw Product Banner */}
+            {isRawProduct && (
+                <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                        <Package size={18} className="text-indigo-600" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-semibold text-indigo-900">Filtered Raw Product</p>
+                        <p className="text-xs text-indigo-700">This product was filtered out from the raw data and is not in the master stock.</p>
+                    </div>
+                </div>
+            )}
+
             {/* Product Info - Pink gradient card */}
             <Card variant="gradient">
                 <div className="flex items-start gap-4">
@@ -90,7 +108,7 @@ const ProductDetail = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Product Attributes */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className={`${isRawProduct ? 'lg:col-span-3' : 'lg:col-span-2'} space-y-6`}>
                     <Card title="Product Attributes">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {descriptiveColumns.map(key => (
@@ -135,10 +153,12 @@ const ProductDetail = () => {
                     )}
                 </div>
 
-                {/* Merge Metadata */}
-                <div>
-                    <MergeMetadata product={product} />
-                </div>
+                {/* Merge Metadata - Only show for normal products */}
+                {!isRawProduct && (
+                    <div>
+                        <MergeMetadata product={product} />
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -51,6 +51,10 @@ export const verifyAuthAPI = (token) => api.get('/auth/verify', {
 // API methods
 export const dashboardAPI = {
     getSummary: () => api.get('/dashboard/summary'),
+    getAuditCounts: () => api.get('/api/audit/counts'),
+    getFilteredRecords: () => api.get('/api/filtered-records'),
+    getMergedProducts: () => api.get('/api/merged-products'),
+    getRawProduct: (productId) => api.get(`/api/raw-product/${productId}`),
     getBrands: () => api.get('/dashboard/brands'),
     getProducts: (limit = 100, skip = 0, search = '', brand = '', confidenceStatus = 'all') =>
         api.get(`/dashboard/products?limit=${limit}&skip=${skip}&search=${search}&brand=${brand}&confidence_status=${confidenceStatus}`),

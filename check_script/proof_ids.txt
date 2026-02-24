@@ -1,0 +1,14 @@
+--- 3 NULL RECORDS (Dropped) ---
+db.raw_data.find({"_id": ObjectId("698093668daf39588e7441fe")})
+db.raw_data.find({"_id": ObjectId("698093668daf39588e7441ff")})
+db.raw_data.find({"_id": ObjectId("698093668daf39588e744200")})
+
+--- 4 MERGED RECORDS (Duplicates) ---
+// Product: APOLLO STICK WAFER STRAWBERRY 12X11GM (UPC: 726165121045) found 1 times in Raw:
+db.raw_data.find({"_id": ObjectId("698093648daf39588e71bc7c")})
+// Product: POCKY STRAWBERRY 40GM (UPC: 8851019310206) found 1 times in Raw:
+db.raw_data.find({"_id": ObjectId("698093658daf39588e728fce")})
+// Product: POCKY DOUBLE CHOCO 39G (UPC: 8851019310244) found 1 times in Raw:
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72907c")})
+// Product: MEIJI HELLO PANDA CHOC 43GM (UPC: 8888077102023) found 1 times in Raw:
+db.raw_data.find({"_id": ObjectId("698093658daf39588e72a95e")})

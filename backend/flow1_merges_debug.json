@@ -1,0 +1,92 @@
+[
+  {
+    "merged_product": "LOACKER CREMKAKAO 45 GM",
+    "upc": 80001263,
+    "size": "45GM",
+    "merged_from": [
+      "LOACKER CREMKAKAO 45 GM",
+      "LOACKER CREMKAKAO 45GM"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "APOLLO CHOC STICK WAFER 12X11GM",
+    "upc": 726165021048,
+    "size": "11GM",
+    "merged_from": [
+      "APOLLO CHOC STICK WAFER 12X11GM",
+      "APOLLO STICK WAFER CHOC 11GMX12"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "APOLLO STICK WAFER STRAWBERRY 12X11GM",
+    "upc": 726165121045,
+    "size": "11GM",
+    "merged_from": [
+      "APOLLO STICK WAFER STRAWBERRY 12X11GM",
+      "APOLLO STRAWBERRY STICK WAFER 12X11GM"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "POCKY STRAWBERRY 40GM",
+    "upc": 8851019310206,
+    "size": "40GM",
+    "merged_from": [
+      "POCKY STRAWBERRY 40GM",
+      "POCKY STRAWBERRY FLAVOUR 40GM"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "POCKY DOUBLE CHOCO 39G",
+    "upc": 8851019310244,
+    "size": "39GM",
+    "merged_from": [
+      "POCKY DOUBLE CHOCO 39G",
+      "POCKY DOUBLE CHOCOLATE 39G"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "MEIJI HELLO PANDA CHOC 43GM",
+    "upc": 8888077102023,
+    "size": "43GM",
+    "merged_from": [
+      "MEIJI HELLO PANDA CHOC 43GM",
+      "MEIJI HELLO PANDA CHOCOLATE 43GM"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "JULIE'S SANDWICH CHEESE CONVI PACK (12X28G) 336G",
+    "upc": 9556121020607,
+    "size": "28GM",
+    "merged_from": [
+      "JULIE'S SANDWICH CHEESE CONVI PACK (12X28G) 336G",
+      "JULIES CHEESE SANDWICH CONVI PACK 336GM (12X28GM)"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "JULIE'S BUTTER CRACKERS 360G",
+    "upc": 9556121026647,
+    "size": "360GM",
+    "merged_from": [
+      "JULIE'S BUTTER CRACKERS 360G",
+      "JULIE'S BUTTER CRACKERS 360GM"
+    ],
+    "count": 2
+  },
+  {
+    "merged_product": "HWA TAI MINI CRACKER CHEESE 350 GM",
+    "upc": 9556167230602,
+    "size": "350GM",
+    "merged_from": [
+      "HWA TAI MINI CRACKER CHEESE 350 GM",
+      "HWA TAI MINI CRACKER CHEESE 350G"
+    ],
+    "count": 2
+  }
+]

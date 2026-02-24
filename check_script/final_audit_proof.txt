@@ -1,0 +1,10 @@
+=== DATA QUALITY AUDIT PROOF (7 RECORDS) ===
+
+CATEGORY A: DROPPED RECORDS (NULL ITEM) - 3 Records
+db.raw_data.find({"_id": ObjectId("698093668daf39588e7441fe")})
+db.raw_data.find({"_id": ObjectId("698093668daf39588e7441ff")})
+db.raw_data.find({"_id": ObjectId("698093668daf39588e744200")})
+
+CATEGORY B: MERGED RECORDS (DUPLICATES) - 4 Records Reduced
+
+Total Gap explained: 3 (Dropped) + 0 (Merged) = 3 Records.

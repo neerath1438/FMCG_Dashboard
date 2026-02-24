@@ -1,0 +1,90 @@
+﻿OpenAI-only client initialized for Flow 2
+Starting Flow 2 Debug Test for Munchys Lexus...
+Confidence Threshold: 0.92
+--------------------------------------------------
+Processing: MUNCHYS LEXUS F/PACK CHOCOLATE SANDWICH 190 GM(19GM X 10)
+   -> Brand: MUNCHYS
+   -> Flavour: CHOCOLATE
+   -> Variant: REGULAR
+   -> Confidence: 1.0
+------------------------------
+Processing: BONTEMPS COOKIES PNUT 380GM
+   -> Brand: BONTEMPS
+   -> Flavour: PEANUT
+   -> Variant: REGULAR
+   -> Confidence: 1.0
+------------------------------
+Processing: FAZ CHIA SEED CHOCOLATE CHIP COOKIES 90G
+   -> Brand: FAZ
+   -> Flavour: CHOCOLATE CHIP
+   -> Variant: REGULAR
+   -> Confidence: 1.0
+------------------------------
+Processing: ARNOLD'S TIM TAM SALT CARAMEL BROWNIE
+Rule Guard: Restored compound flavour 'SALT CARAMEL' for 'ARNOLD'S TIM TAM SALT CARAMEL BROWNIE'
+   -> Brand: ARNOLD'S
+   -> Flavour: SALT CARAMEL
+   -> Variant: REGULAR
+   -> Confidence: 1.0
+------------------------------
+Processing: DODONI CARAMELISED ONION
+Rule Guard: Restored compound flavour 'CARAMELISED ONION' for 'DODONI CARAMELISED ONION'
+   -> Brand: DODONI
+   -> Flavour: CARAMELISED ONION
+   -> Variant: REGULAR
+   -> Confidence: 0.8
+------------------------------
+Processing: LOACKER QUADRATINI PREMIUM NPLTNE
+   -> Brand: LOACKER
+   -> Flavour: NEAPOLITAN
+   -> Variant: REGULAR
+   -> Confidence: 1.0
+------------------------------
+Processing: OREO DARK & WHITE CHOCOLATE
+   -> Brand: OREO
+   -> Flavour: DARK CHOCOLATE
+   -> Variant: REGULAR
+   -> Confidence: 1.0
+------------------------------
+Processing: ALL TIME FAVOURITE ASSORTED BISCUIT
+   -> Brand: ALL TIME
+   -> Flavour: NORMAL
+   -> Variant: REGULAR
+   -> Confidence: 0.8
+------------------------------
+Processing: ORI SALTED SAVOURY CRACKER
+Rule Guard: Restored compound flavour 'SALTED SAVOURY' for 'ORI SALTED SAVOURY CRACKER'
+   -> Brand: ORI
+   -> Flavour: SALTED SAVOURY
+   -> Variant: REGULAR
+   -> Confidence: 1.0
+------------------------------
+
+Grouping Results (Master Merges):
+
+Group 1 (Key: HI_CONF|MUNCHYS|LEXUS|BISCUIT|CHOCOLATE|REGULAR|REG|WEST MALAYSIA|X10|Sales Value|190G)
+  - MUNCHYS LEXUS F/PACK CHOCOLATE SANDWICH 190 GM(19GM X 10)
+
+Group 2 (Key: HI_CONF|BONTEMPS|NONE|COOKIE|PEANUT|REGULAR|REG|WEST MALAYSIA|X10|Sales Value|380G)
+  - BONTEMPS COOKIES PNUT 380GM
+
+Group 3 (Key: HI_CONF|FAZ|NONE|COOKIE|CHOCOLATE CHIP|REGULAR|REG|WEST MALAYSIA|X10|Sales Value|90G)
+  - FAZ CHIA SEED CHOCOLATE CHIP COOKIES 90G
+
+Group 4 (Key: HI_CONF|ARNOLD'S|TIM TAM|BISCUIT|SALT CARAMEL|REGULAR|REG|WEST MALAYSIA|X10|Sales Value|None)
+  - ARNOLD'S TIM TAM SALT CARAMEL BROWNIE
+
+Group 5 (Key: LOW_CONF|DODONI|CARAMELISEDDODONIONION|WEST MALAYSIA|X10|Sales Value|None)
+  - DODONI CARAMELISED ONION
+
+Group 6 (Key: HI_CONF|LOACKER|QUADRATINI|WAFER|NEAPOLITAN|REGULAR|REG|WEST MALAYSIA|X10|Sales Value|None)
+  - LOACKER QUADRATINI PREMIUM NPLTNE
+
+Group 7 (Key: HI_CONF|OREO|NONE|BISCUIT|DARK CHOCOLATE|REGULAR|REG|WEST MALAYSIA|X10|Sales Value|None)
+  - OREO DARK & WHITE CHOCOLATE
+
+Group 8 (Key: LOW_CONF|ALL TIME|ALLASSORTEDBISCUITFAVOURITETIME|WEST MALAYSIA|X10|Sales Value|None)
+  - ALL TIME FAVOURITE ASSORTED BISCUIT
+
+Group 9 (Key: HI_CONF|ORI|NONE|CRACKER|SALTED SAVOURY|REGULAR|REG|WEST MALAYSIA|X10|Sales Value|None)
+  - ORI SALTED SAVOURY CRACKER

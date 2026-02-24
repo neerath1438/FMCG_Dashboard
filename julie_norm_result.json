@@ -1,0 +1,62 @@
+[
+  {
+    "original": "JULIE CHEESE STICKS 4.5KG",
+    "result": {
+      "brand": "JULIES",
+      "product_line": "",
+      "flavour": "CHEESE",
+      "variant": "REGULAR",
+      "product_form": "STICK",
+      "is_sugar_free": false,
+      "size": "4500G",
+      "base_item": "JULIE STICK NORMAL 4.5KG",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  },
+  {
+    "original": "JULIES CHEESE STICKS 4.5KG",
+    "result": {
+      "brand": "JULIES",
+      "product_line": null,
+      "flavour": "CHEESE",
+      "variant": "REGULAR",
+      "product_form": "STICK",
+      "is_sugar_free": false,
+      "size": "4500G",
+      "base_item": "JULIES STICK NORMAL REGULAR 4500G",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  },
+  {
+    "original": "HUP SENG CREAM CRACKER 12X428 GM",
+    "result": {
+      "brand": "HUP SENG",
+      "product_line": null,
+      "flavour": "NORMAL",
+      "variant": "REGULAR",
+      "product_form": "CRACKER",
+      "is_sugar_free": false,
+      "size": "428G",
+      "base_item": "HUP SENG CRACKER NORMAL REGULAR 428G",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  },
+  {
+    "original": "HUP SENG CRM CRACKER 428GMX12",
+    "result": {
+      "brand": "HUP SENG",
+      "product_line": null,
+      "flavour": "NORMAL",
+      "variant": "REGULAR",
+      "product_form": "CRACKER",
+      "is_sugar_free": false,
+      "size": "428G",
+      "base_item": "HUP SENG CRACKER NORMAL REGULAR 428G",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    }
+  }
+]

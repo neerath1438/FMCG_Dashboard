@@ -1,0 +1,34 @@
+[
+  {
+    "original": "MUNCHYS CREAM CRACKER 300GM(25GM X 12)",
+    "result": {
+      "brand": "MUNCHYS",
+      "product_line": "CREAM CRACKER",
+      "flavour": "NORMAL",
+      "variant": "REGULAR",
+      "product_form": "CRACKER",
+      "is_sugar_free": false,
+      "size": "300G(25GMX12)",
+      "base_item": "MUNCHYS CREAM CRACKER NORMAL 300G(25GMX12)",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    },
+    "signature": "1225300CRACKERCREAMGRAMMUNCHYSX"
+  },
+  {
+    "original": "MUNCHYS CREAM CRACKERS 300GM(25GM X 12)",
+    "result": {
+      "brand": "MUNCHYS",
+      "product_line": "CREAM CRACKER",
+      "flavour": "NORMAL",
+      "variant": "REGULAR",
+      "product_form": "CRACKER",
+      "is_sugar_free": false,
+      "size": "300G(25GM X 12)",
+      "base_item": "MUNCHYS CREAM CRACKER NORMAL 300G(25GM X 12)",
+      "removed_marketing_terms": [],
+      "confidence": 1.0
+    },
+    "signature": "1225300CRACKERCREAMGRAMMUNCHYSX"
+  }
+]

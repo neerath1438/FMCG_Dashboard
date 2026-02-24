@@ -31,18 +31,44 @@ def normalize_synonyms(text):
     """Normalize common FMCG synonyms to improve fuzzy matching."""
     if not text: return ""
     s = str(text).upper()
+    # ✅ Add space between letters and numbers (e.g., OAT600G -> OAT 600G)
+    s = re.sub(r'([A-Z])(\d)', r'\1 \2', s)
+    s = re.sub(r'(\d)([A-Z])', r'\1 \2', s)
+    # ✅ Removed apostrophes and backticks for consistent matching (e.g. O'SOY -> OSOY)
+    s = s.replace("'", "").replace("`", "")
+    # ✅ Remove Piece Counts (e.g., 9PCS, 10 PCS) - they often vary between same items
+    s = re.sub(r'\b\d+\s*PCS\b', ' ', s)
+    # ✅ Separate multipliers (e.g., 428GMX12 -> 428 GM X 12)
+    s = re.sub(r'([A-Z])([X\*])', r'\1 \2', s)
+    s = re.sub(r'([X\*])([A-Z])', r'\1 \2', s)
+    s = re.sub(r'(\d)([X\*])', r'\1 \2', s)
+    s = re.sub(r'([X\*])(\d)', r'\1 \2', s)
+    
     # Define synonym maps
     syns = {
-        "CHOCOLATE": ["COCOA", "CHOC", "CHOCO"],
-        "STRAWBERRY": ["S/BERRY", "SBERRY", "STRWB"],
-        "VANILLA": ["VAN"],
-        "ASSORTED": ["ASST", "ASSTD"],
+        "CHOCOLATE": ["COCOA", "CHOC", "CHOCO", "COK"],
+        "STRAWBERRY": ["S/BERRY", "SBERRY", "STRWB", "STRW", "S/BERY"],
+        "VANILLA": ["VAN", "VNL", "VNLA"],
+        "PEANUT": ["PNUT", "PNT", "P-NUT"],
+        "NEAPOLITAN": ["NPLTNE", "NAPOLITANER"],
+        "ASSORTED": ["ASST", "ASSTD", "MIX"],
+        "CHOCOLATE CHIP": ["C/CHIP", "CHOC CHIP", "CHIP", "CHOC CHIPS"],
+        "SALTED CARAMEL": ["SALTED CRMEL", "SALT CRMEL", "SALTED CARAMEL"],
+        "MACADAMIA": ["MCDAMIA", "MACDAMIA", "MACADMIA"],
+        "CRANBERRY": ["CRNBER", "CRNBERRIES", "CRNBERY", "CRNBRIES"],
+        "BLACKCURRANT": ["B/CURR", "BCURR", "BLACKCURR"],
+        "HAZELNUT": ["HZLNT", "HZLNUT", "H/NUT"],
+        "PISTACHIO": ["PSTCHIO", "PISTCH"],
         "GRAM": ["GM", "GMS", "G"],
         "BISCUIT": ["BISCUITS", "COOKIES", "COOKIE", "SNACK", "SNACKS", "STICK", "STICKS", "STIX"],
+        "CRACKER": ["CRACKERS"],
+        "CREAM": ["CRM", "CREME"],
+        "JULIES": ["JULIE", "JULI", "JULYS"],
     }
     for primary, aliases in syns.items():
         for alias in aliases:
             # Use regex to replace whole word only to avoid partial matches
+            # 🚨 WORD BOUNDARY GUARD (\b) prevents 'CARAMELISED' matching 'CARAMEL'
             s = re.sub(rf'\b{alias}\b', primary, s)
     return s
 
@@ -79,20 +105,229 @@ def extract_size_val(size_str):
             return 0.0
     return 0.0
 
+async def process_nielsen_dataframe(df, sheet_name, request=None):
+    """
+    Core logic for Flow 1: Processes a single DataFrame and saves to single_stock_data.
+    """
+    FIXED_SHEET_NAME = "wersel_match"
+    
+    # ✅ FIX: Sort DataFrame for deterministic processing
+    sort_cols = []
+    for col in ['UPC', 'ITEM', 'MARKETS', 'MPACK', 'Facts']:
+        if col in df.columns:
+            sort_cols.append(col)
+    
+    if sort_cols:
+        df = df.sort_values(by=sort_cols).reset_index(drop=True)
+    
+    # KEY COLUMN IDENTIFICATION
+    col_map = {c.upper().strip(): c for c in df.columns}
+    
+    # Must have UPC
+    if "UPC" not in col_map:
+        return {"error": "Missing UPC column"}
+        
+    upc_col = col_map["UPC"]
+    market_col = col_map.get("MARKETS")
+    mpack_col = col_map.get("MPACK")
+    facts_col = col_map.get("FACTS")
+    size_col = col_map.get("NRMSIZE")
+    item_col = col_map.get("ITEM") or col_map.get("PRODUCT NAME") or col_map.get("DESCRIPTION")
+    
+    # Store raw data - Preserve all rows
+    raw_coll = get_collection(RAW_DATA_COL)
+    
+    rows_to_insert = []
+    df_raw = df.replace({pd.NA: None, float('nan'): None})
+    for row in df_raw.to_dict("records"):
+        row["sheet_name"] = FIXED_SHEET_NAME
+        rows_to_insert.append(row)
+        
+    if rows_to_insert:
+        raw_coll.insert_many(rows_to_insert)
+    
+    # Identify monthly/metric columns
+    PROTECTED_COLS = ["MARKETS", "MARKET", "MPACK", "PACK", "BRAND", "ITEM", "UPC", "FACTS", "FACT", "NRMSIZE", "SIZE"]
+    
+    monthly_cols = [c for c in df.columns if 
+        any(m in str(c).upper() for m in ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC", "W/E", "MAT"])
+        and str(c).upper().strip() not in PROTECTED_COLS
+    ]
+    
+    ignore_cols = monthly_cols + [upc_col]
+    if facts_col: ignore_cols.append(facts_col)
+    
+    descriptive_cols = [c for c in df.columns if c not in ignore_cols]
+    
+    # Filter valid UPCs
+    df = df[df[upc_col].notnull()].copy()
+    
+    fill_val = "UNKNOWN"
+    group_keys = [upc_col]
+    
+    if market_col: 
+        df[market_col] = df[market_col].fillna(fill_val)
+        group_keys.append(market_col)
+    if mpack_col: 
+        df[mpack_col] = df[mpack_col].fillna(fill_val)
+        group_keys.append(mpack_col)
+    if facts_col: 
+        df[facts_col] = df[facts_col].fillna(fill_val)
+        group_keys.append(facts_col)
+
+    brand_col = col_map.get("BRAND")
+    flavour_col = col_map.get("FLAVOUR") or col_map.get("FLAVOR")
+    
+    if item_col:
+        df["_group_item_clean"] = df[item_col].apply(simple_clean_item)
+        group_keys.append("_group_item_clean")
+        
+    if brand_col:
+        df[brand_col] = df[brand_col].fillna(fill_val)
+        group_keys.append(brand_col)
+    
+    if flavour_col:
+        df[flavour_col] = df[flavour_col].fillna(fill_val)
+        group_keys.append(flavour_col)
+
+    variant_col = col_map.get("VARIANT")
+    if variant_col:
+        df[variant_col] = df[variant_col].fillna(fill_val)
+        group_keys.append(variant_col)
+
+    if size_col:
+        df[size_col] = df[size_col].fillna(fill_val)
+        group_keys.append(size_col)
+
+    print(f"[{sheet_name}] Creating groups...")
+    groups_list = list(df.groupby(group_keys))
+    
+    def process_single_group(group_data):
+        group_ids, group = group_data
+        buckets = [group.to_dict('records')]
+        bucket_records = []
+        for bucket in buckets:
+            base_row = bucket[0]
+            merged_count = len(bucket)
+            product_names = [r[item_col] for r in bucket] if item_col else [f"UPC_{base_row[upc_col]}"] * merged_count
+            
+            merged_record = {"UPC": base_row[upc_col]}
+            if market_col: merged_record[market_col] = base_row[market_col]
+            if mpack_col: merged_record[mpack_col] = base_row[mpack_col]
+            if facts_col: merged_record[facts_col] = base_row[facts_col]
+            
+            for col in descriptive_cols:
+                if col in base_row and col not in merged_record:
+                    merged_record[col] = base_row[col]
+            
+            for col in monthly_cols:
+                total = 0.0
+                if col in base_row:
+                    for r in bucket:
+                        val = r.get(col, 0)
+                        try:
+                            f_val = float(val)
+                            if not math.isnan(f_val):
+                                total += f_val
+                        except: pass
+                merged_record[col] = total
+            
+            brand = merged_record.get("BRAND", "UNKNOWN")
+            merge_id = f"{brand}_{uuid.uuid4().hex}"
+            
+            merge_rule_parts = ["UPC"]
+            if market_col: merge_rule_parts.append("Market")
+            if mpack_col: merge_rule_parts.append("MPack")
+            if facts_col: merge_rule_parts.append("Facts")
+            if size_col and merged_count > 1: merge_rule_parts.append("Size") # Removed (5g)
+            
+            merged_record["merge_id"] = merge_id
+            merged_record["merge_items"] = product_names
+            merged_record["ITEM"] = product_names[0] if product_names else f"UPC_{base_row[upc_col]}"
+            merged_record["merged_from_docs"] = merged_count
+            merged_record["merge_rule"] = " + ".join(merge_rule_parts)
+            merged_record["merged_upcs"] = [str(base_row[upc_col])]
+            merged_record["merge_level"] = "NO_MERGE" if merged_count == 1 else f"MERGED_{merged_count}_VARIANTS"
+            merged_record["sheet_name"] = "wersel_match"
+            bucket_records.append(merged_record)
+        
+        merge_logs = []
+        for rec in bucket_records:
+            if rec.get("merged_from_docs", 1) > 1:
+                merge_logs.append({
+                    "merged_product": rec.get("ITEM"),
+                    "upc": rec.get("UPC"),
+                    "size": rec.get(size_col) if size_col else "N/A",
+                    "merged_from": rec.get("merge_items"),
+                    "count": rec.get("merged_from_docs")
+                })
+        return bucket_records, merge_logs
+
+    single_stock_records = []
+    all_merge_logs = []
+    batch_size = 1000
+    total_groups = len(groups_list)
+    
+    print(f"[{sheet_name}] Starting batch-wise parallel processing...")
+    
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        for batch_start in range(0, total_groups, batch_size):
+            if request and await request.is_disconnected():
+                print(f"Stopping Flow 1: Client disconnected during batch processing")
+                return {}
+            batch_end = min(batch_start + batch_size, total_groups)
+            batch_results = list(executor.map(process_single_group, groups_list[batch_start:batch_end]))
+            for group_records, group_logs in batch_results:
+                single_stock_records.extend(group_records)
+                all_merge_logs.extend(group_logs)
+            await asyncio.sleep(0)
+    
+    if all_merge_logs:
+        try:
+            with open("flow1_merges_debug.json", "w", encoding="utf-8") as f:
+                json.dump(all_merge_logs, f, indent=2)
+            print(f"[{sheet_name}] Saved {len(all_merge_logs)} merge logs to flow1_merges_debug.json")
+        except Exception as e:
+            print(f"Error saving merge logs: {e}")
+
+    print(f"[{sheet_name}] Parallel processing complete: {len(single_stock_records)} total records")
+
+    if single_stock_records:
+        single_stock_coll = get_collection(SINGLE_STOCK_COL)
+        single_stock_coll.delete_many({"sheet_name": "wersel_match"})
+        total_records = len(single_stock_records)
+        
+        print(f"[{sheet_name}] Saving {total_records} records to MongoDB...")
+
+        for i in range(0, total_records, 5000):
+            batch = single_stock_records[i:i + 5000]
+            try:
+                single_stock_coll.insert_many(batch, ordered=False)
+            except Exception as e:
+                print(f"[{sheet_name}] Batch insert error: {e}")
+                for record in batch:
+                    try:
+                        single_stock_coll.insert_one(record)
+                    except:
+                        pass
+            progress = min(i + 5000, total_records)
+            if progress % 10000 == 0 or progress == total_records:
+                print(f"[{sheet_name}] MongoDB: Saved {progress}/{total_records} ({(progress/total_records*100):.1f}%)")
+        print(f"[{sheet_name}] ✅ Saved {total_records} records to MongoDB")
+    
+    return {"raw_count": len(df), "single_stock_count": len(single_stock_records)}
+
 async def process_excel_flow_1(file_contents, request=None):
     """
     Flow 1: Strict UPC + Attribute merging with Size Tolerance.
     Supports Excel (.xlsx, .xls) and CSV (.csv) files.
     Groups by UPC, Markets, MPACK, Facts to separate variants/metrics.
-    Merges sizes within 5g tolerance inside each group.
+    Uses Exact Size matching (no tolerance) for grouping.
     """
     import io
     
     # ✅ STEP 0: Reset Database for Fresh Upload (Single-Session Flow)
     reset_main_collections()
-    
-    # Fixed Sheet Name for all operations
-    FIXED_SHEET_NAME = "wersel_match"
     
     # Detect file type and read accordingly
     try:
@@ -124,275 +359,28 @@ async def process_excel_flow_1(file_contents, request=None):
         else:
             df = df_csv  # Use the CSV data
         
-        # ✅ FIX: Sort DataFrame for deterministic processing
-        # Ensures same file always processes in same order
-        sort_cols = []
-        for col in ['UPC', 'ITEM', 'MARKETS', 'MPACK', 'Facts']:
-            if col in df.columns:
-                sort_cols.append(col)
-        
-        if sort_cols:
-            df = df.sort_values(by=sort_cols).reset_index(drop=True)
-        
-        # KEY COLUMN IDENTIFICATION
-        # Normalize columns slightly for matching but keep original for access
-        col_map = {c.upper().strip(): c for c in df.columns}
-        
-        # Must have UPC
-        if "UPC" not in col_map:
-            continue
-            
-        upc_col = col_map["UPC"]
-        
-        # Optional strict grouping keys
-        market_col = col_map.get("MARKETS")
-        mpack_col = col_map.get("MPACK")
-        facts_col = col_map.get("FACTS")
-        
-        # Size for tolerance
-        size_col = col_map.get("NRMSIZE")
-        
-        # Product Name
-        item_col = col_map.get("ITEM") or col_map.get("PRODUCT NAME") or col_map.get("DESCRIPTION")
-        
-        # Store raw data - Preserve all rows
-        raw_coll = get_collection(RAW_DATA_COL)
-        
-        rows_to_insert = []
-        # Convert NaNs to None/empty for JSON safety before raw insert
-        df_raw = df.replace({pd.NA: None, float('nan'): None})
-        for row in df_raw.to_dict("records"):
-            row["sheet_name"] = FIXED_SHEET_NAME
-            rows_to_insert.append(row)
-            
-        if rows_to_insert:
-            raw_coll.insert_many(rows_to_insert)
-        
-        # Identify monthly/metric columns
-        # Exclude specific non-monthly columns that might accidentally match (e.g. "Markets" matches "MAR")
-        PROTECTED_COLS = ["MARKETS", "MARKET", "MPACK", "PACK", "BRAND", "ITEM", "UPC", "FACTS", "FACT", "NRMSIZE", "SIZE"]
-        
-        monthly_cols = [c for c in df.columns if 
-            any(m in str(c).upper() for m in ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC", "W/E", "MAT"])
-            and str(c).upper().strip() not in PROTECTED_COLS
-        ]
-        
-        # Columns to keep value from first item (descriptive)
-        ignore_cols = monthly_cols + [upc_col]
-        if facts_col: ignore_cols.append(facts_col) # Facts is grouping key, but we handle it
-        
-        descriptive_cols = [c for c in df.columns if c not in ignore_cols]
-        
-        # Filter valid UPCs
-        df = df[df[upc_col].notnull()].copy()
-        
-        # PREPARE FOR GROUPING
-        # Fill NaNs for grouping keys to avoid exclusion
-        fill_val = "UNKNOWN"
-        group_keys = [upc_col]
-        
-        if market_col: 
-            df[market_col] = df[market_col].fillna(fill_val)
-            group_keys.append(market_col)
-        if mpack_col: 
-            df[mpack_col] = df[mpack_col].fillna(fill_val)
-            group_keys.append(mpack_col)
-        if facts_col: 
-            df[facts_col] = df[facts_col].fillna(fill_val)
-            group_keys.append(facts_col)
-
-        # ✅ NEW: Add Brand, Item (Cleaned), and Flavour to Group Keys to handle shared UPCs
-        # This fulfills Option A: Segmenting distinct products even if UPC is identical.
-        brand_col = col_map.get("BRAND")
-        flavour_col = col_map.get("FLAVOUR") or col_map.get("FLAVOR")
-        
-        # We use a cleaned version of the item name to group similar descriptions together 
-        # while keeping distinct forms (Stick vs Crispy) separate.
-        if item_col:
-            df["_group_item_clean"] = df[item_col].apply(simple_clean_item)
-            group_keys.append("_group_item_clean")
-            
-        if brand_col:
-            df[brand_col] = df[brand_col].fillna(fill_val)
-            group_keys.append(brand_col)
-        
-        if flavour_col:
-            df[flavour_col] = df[flavour_col].fillna(fill_val)
-            group_keys.append(flavour_col)
-
-
-        # ✅ ULTRA FAST: Cache groupby result (avoid calling it twice!)
-        print(f"[{sheet_name}] Creating groups (this may take a moment for large files)...")
-        groups_list = list(df.groupby(group_keys))
-        print(f"[{sheet_name}] Processing {len(groups_list)} groups in parallel...")
-        
-        def process_single_group(group_data):
-            """Process a single group (for parallel execution)"""
-            group_ids, group = group_data
-            
-            # Parse sizes for tolerance handling
-            group = group.copy()
-            if size_col:
-                group["_size_val"] = group[size_col].astype(str).apply(extract_size_val)
-                # Sort by size to make bucketing easier
-                group = group.sort_values("_size_val").reset_index(drop=True)
-            else:
-                group["_size_val"] = 0.0
-            
-            # ✅ ULTRA FAST: Vectorized Bucketing (10x faster than iterrows!)
-            # Convert to NumPy array for vectorized operations
-            sizes = group["_size_val"].values
-            
-            # Find bucket boundaries where size difference > 5.0
-            if len(sizes) > 1:
-                size_diffs = np.abs(np.diff(sizes))  # Vectorized difference calculation
-                break_points = np.where(size_diffs > 5.0)[0] + 1  # Indices where buckets split
-                
-                # Split group into buckets at break points
-                bucket_indices = np.split(np.arange(len(group)), break_points)
-                buckets = [group.iloc[indices].to_dict('records') for indices in bucket_indices]
-            else:
-                # Single row group
-                buckets = [group.to_dict('records')]
-            
-            # Process each bucket (Create ONE record per bucket)
-            bucket_records = []
-            for bucket in buckets:
-                base_row = bucket[0]
-                merged_count = len(bucket)
-                
-                # Get all item names in this bucket
-                product_names = []
-                if item_col:
-                    product_names = [r[item_col] for r in bucket]
-                else:
-                    product_names = [f"UPC_{base_row[upc_col]}"] * merged_count
-                
-                # Base Record
-                merged_record = {"UPC": base_row[upc_col]}
-                
-                # Add Grouping Keys explicitly
-                if market_col: merged_record[market_col] = base_row[market_col]
-                if mpack_col: merged_record[mpack_col] = base_row[mpack_col]
-                if facts_col: merged_record[facts_col] = base_row[facts_col]
-                
-                # Add Descriptive Columns (Take from first)
-                for col in descriptive_cols:
-                    if col in base_row and col not in merged_record:
-                        merged_record[col] = base_row[col]
-                
-                # Sum Monthly Columns
-                for col in monthly_cols:
-                    total = 0.0
-                    if col in base_row: # Check existence in series
-                        for r in bucket:
-                            val = r.get(col, 0)
-                            try:
-                                f_val = float(val)
-                                if not math.isnan(f_val):
-                                    total += f_val
-                            except (ValueError, TypeError):
-                                pass
-                    merged_record[col] = total
-                
-                # Metadata
-                brand = merged_record.get("BRAND", "UNKNOWN")
-                merge_id = f"{brand}_{uuid.uuid4().hex}"
-                
-                merge_rule_parts = ["UPC"]
-                if market_col: merge_rule_parts.append("Market")
-                if mpack_col: merge_rule_parts.append("MPack")
-                if facts_col: merge_rule_parts.append("Facts")
-                if size_col and merged_count > 1: merge_rule_parts.append("Size(5g)")
-                
-                merged_record["merge_id"] = merge_id
-                merged_record["merge_items"] = product_names
-                # ✅ FIX: Preserve ITEM field for Flow 2
-                merged_record["ITEM"] = product_names[0] if product_names else f"UPC_{base_row[upc_col]}"
-                merged_record["merged_from_docs"] = merged_count
-                merged_record["merge_rule"] = " + ".join(merge_rule_parts)
-                merged_record["merged_upcs"] = [str(base_row[upc_col])]
-                
-                if merged_count == 1:
-                    merged_record["merge_level"] = "NO_MERGE"
-                else:
-                    merged_record["merge_level"] = f"MERGED_{merged_count}_VARIANTS"
-                
-                # Add sheet_name for upsert tracking
-                merged_record["sheet_name"] = "wersel_match"
-                
-                bucket_records.append(merged_record)
-            
-            return bucket_records
-        
-        # ✅ BATCH-WISE PARALLEL EXECUTION: Process in chunks to avoid memory overflow
-        single_stock_records = []
-        batch_size = 1000  # Process 1000 groups at a time
-        total_groups = len(groups_list)
-        
-        print(f"[{sheet_name}] Starting batch-wise parallel processing...")
-        
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            for batch_start in range(0, total_groups, batch_size):
-                # Check for disconnection
-                if request and await request.is_disconnected():
-                    print(f"Stopping Flow 1: Client disconnected during batch processing")
-                    return sheets_info
-                
-                batch_end = min(batch_start + batch_size, total_groups)
-                batch_groups = groups_list[batch_start:batch_end]
-                
-                # Process this batch in parallel
-                batch_results = list(executor.map(process_single_group, batch_groups))
-                
-                # Flatten and collect results
-                for group_records in batch_results:
-                    single_stock_records.extend(group_records)
-                
-                # Progress update
-                # print(f"[{sheet_name}] Processed {batch_end}/{total_groups} groups ({len(single_stock_records)} records created)")
-                
-                await asyncio.sleep(0)  # Yield for disconnect checks
-        
-        print(f"[{sheet_name}] Parallel processing complete: {len(single_stock_records)} total records")
-        
-        # ✅ OPTIMIZED: Direct MongoDB batch insert with parallel execution
-        if single_stock_records:
-            single_stock_coll = get_collection(SINGLE_STOCK_COL)
-            single_stock_coll.delete_many({"sheet_name": FIXED_SHEET_NAME})
-            
-            # Batch insert with ordered=False for parallel execution (much faster)
-            batch_size = 5000  # Larger batches for better performance
-            total_records = len(single_stock_records)
-            
-            print(f"[{sheet_name}] Saving {total_records} records to MongoDB...")
-            
-            for i in range(0, total_records, batch_size):
-                batch = single_stock_records[i:i + batch_size]
-                try:
-                    # ordered=False allows MongoDB to insert in parallel
-                    single_stock_coll.insert_many(batch, ordered=False)
-                except Exception as e:
-                    print(f"[{sheet_name}] Batch insert error: {e}")
-                    # Retry with smaller batch if needed
-                    for record in batch:
-                        try:
-                            single_stock_coll.insert_one(record)
-                        except:
-                            pass
-                
-                progress = min(i + batch_size, total_records)
-                if progress % 10000 == 0 or progress == total_records:
-                    print(f"[{sheet_name}] MongoDB: Saved {progress}/{total_records} ({(progress/total_records*100):.1f}%)")
-            
-            print(f"[{sheet_name}] ✅ Saved {total_records} records to MongoDB")
-        
-        sheets_info[sheet_name] = {  # Keep original sheet name for UI, but data is in shared collection
-            "raw_count": len(df),
-            "single_stock_count": len(single_stock_records)
-        }
+        sheets_info[sheet_name] = await process_nielsen_dataframe(df, sheet_name, request)
     
     return sheets_info
+
+async def reprocess_flow_1_from_db():
+    """
+    Automated Phase for full re-run. Reads from raw_data and populates single_stock_data.
+    """
+    print("🔄 Reprocessing Flow 1 from DB (raw_data)...")
+    raw_coll = get_collection(RAW_DATA_COL)
+    docs = list(raw_coll.find({}))
+    if not docs:
+        print("⚠️ No raw data found in DB.")
+        return
+    
+    df = pd.DataFrame(docs)
+    # Remove MongoDB _id if present
+    if "_id" in df.columns: df = df.drop(columns=["_id"])
+    
+    # Process
+    await process_nielsen_dataframe(df, "Reprocess_All")
+    print("✅ Reprocessing Flow 1 Complete.")
 
 
 def normalize_item_llm(item):
@@ -407,8 +395,11 @@ def normalize_item_llm(item):
     # 2. Check persistent MongoDB cache
     cached = get_cached_llm_result(item)
     if cached:
-        llm_cache[item] = cached["result"]
-        return cached["result"]
+        data = cached["result"]
+        # Force re-apply guards even to cached data to ensure consistency after rule updates
+        data = apply_llm_rule_guards(item, data)
+        llm_cache[item] = data
+        return data
     
     system_prompt = """
 You are an FMCG product mastering expert specializing in the Malaysian market.
@@ -427,9 +418,13 @@ Use these standardized terms for any raw keywords found:
   - {BILIS, ANC} -> ANCHOVY
 
 - FLAVORS & VARIANTS:
-  - {COK, CHOC, CHOCO, COKLAT, CHOKLAT, CHOKIT, COKLIT} -> CHOCOLATE
+  - {COK, CHOC, CHOCO, COKLAT, CHOKLAT, CHOKIT, COKLIT} -> CHOCOLATE 
+  (Only when used alone. Do NOT collapse compound flavours like:
+   CHOC CHIP, DARK CHOC, WHITE CHOC, SALTED CHOC, MILK CHOC.)
   - {BAN, BNNA, BANANA} -> BANANA
   - {VAN, VNL, VENLLA, VANILLA} -> VANILLA
+  - {PNUT, PNT, PEANUT} -> PEANUT
+  - {NPLTNE, NEAPOLITAN} -> NEAPOLITAN
   - {PDS, HOT, SPY, PEDAS} -> SPICY
   - {KRI, CRY, KARI} -> CURRY
   - {SSU, MLK, SUSU} -> MILK
@@ -449,6 +444,7 @@ Use these standardized terms for any raw keywords found:
   - {RYAL, ROYAL} -> ROYAL
   - {DBL, DOUBLE, DB} -> DOUBLE
   - {TRP, TRIPLE} -> TRIPLE
+  - {CRM, CREME, CREAM} -> CREAM
 
 - PRODUCT FORMS (IMPORTANT: Keep these distinct):
   - {BISK, BSC, BISCUIT, CKI, COOKIE} -> BISCUIT / COOKIE
@@ -466,7 +462,6 @@ Use these standardized terms for any raw keywords found:
   - {HELLOPANDA, HELLO PANDA} -> HELLO PANDA
   - {LUCKY STICK} -> LUCKY STICK
   - {ASSORTED, ASST, TIN, BOX, PARTY, SELECTION} -> ASSORTED
-  - {BEAN, BUTTER, SUGAR, CREAM, VEGE, VEGETABLE} -> Use as Sub-variant / Flavour
   - {DIP DIP, DIPDIP, DIPPING, CUP} -> DIP DIP / CUP (Treat as distinct product form)
   - {BUBBLE PUFF, BUBBLEPUFF} -> BUBBLE PUFF (Treat as distinct product form)
 
@@ -483,6 +478,12 @@ Use these standardized terms for any raw keywords found:
   - {NES} -> NESCAFE
   - {D.LADY, DL} -> DUTCH LADY
   - {YEO, YS} -> YEOS
+  - {ORI} -> Treat as Brand "ORI" only if it appears at the START of the description. Otherwise, ignore it or check for "ORIGINAL".
+  - {HUP SENG, HUPSENG, HS} -> HUP SENG
+  - {JULIES, JULIE, JULI, JULYS} -> JULIES
+  - {BIOGREEN, BIO GREEN} -> BIO GREEN
+  - {LEE, LEE BRANDS} -> LEE BRANDS
+  - {MUNCHYS, MUNCHY} -> MUNCHYS
 
 - PACKAGING:
   - {CAN, CN} -> CAN
@@ -492,41 +493,162 @@ Use these standardized terms for any raw keywords found:
 
 ### 🍯 SUGAR & DIETARY FLAGS:
 - {SF, NO SUGAR, WITHOUT SUGAR, S.FREE, ZERO SUGAR} -> SUGAR FREE
-- {NORMAL, REGULAR, ORIGINAL} -> NORMAL
+- {NORMAL} -> NORMAL (flavour)
+- {ORIGINAL} -> ORIGINAL (flavour, do NOT convert to NORMAL)
+- {REGULAR} -> REGULAR (variant only. Never treat as flavour.)
+
+### 🏷️ VARIANTS & SUB-FLAVOURS (CRITICAL):
+- Distinguish between REGULAR versions and special ones like {MINI, GIANT, SNOWY, EXTRA, GOLD, PREMIUM, GOKUBOSO, FESTIVE}.
+- If a product has "SNOWY", mark variant as "SNOWY".
+- If it's a standard one, mark variant as "REGULAR".
+
+### 🍯 FLAVOUR & VARIANT RULES (CRITICAL):
+1. **NO SIMPLIFICATION**: Never reduce a compound flavour to a base one.
+2. **PRESERVE ALL COMPONENTS**: If a product has multiple flavor components (e.g., SEA SALT, PISTACHIO, CARAMEL), BOTH must be in the "flavour" string.
+3. **ORDER MATTERS**: Keep the sequence of flavors as much as possible.
+4. **DISTINCT PROFILES**: Treat these as completely DIFFERENT products:
+   - "SEA SALT PISTACHIO CHOCOLATE CHIP" != "DOUBLE CHOCOLATE CHIP"
+   - "ROASTED HAZELNUT CHOCOLATE CHIP" != "CHOCOLATE CHIP"
+   - "SALTED CARAMEL" != "CARAMEL"
+   - "MACADAMIA WHITE CHOCOLATE" != "CRANBERRY WHITE CHOCOLATE"
+
+5. **SPECIFIC EXCLUSIONS**: 
+   - Never ignore ingredients like "HAZELNUT", "PISTACHIO", "ALMOND", "SEA SALT" just because "CHOCOLATE" is also present.
+   - If multiple flavours are present, extract the full specific flavour string (e.g., "STRAWBERRY & BLACKCURRANT").
+   - Do NOT combine flavours unless the compound is an established flavour name.
 
 ### Few-Shot Examples for Accuracy:
-1. Input: "OREO VNL 133G"
-   Output: {"brand": "OREO", "flavour": "VANILLA", "size": "133G", "product_form": "BISCUIT", "is_sugar_free": false, "base_item": "OREO VANILLA BISCUIT 133G", "confidence": 1.0}
-2. Input: "GLICO PRETZ SALTED 31G"
-   Output: {"brand": "GLICO", "flavour": "SALTED", "size": "31G", "product_form": "STICK", "is_sugar_free": false, "base_item": "GLICO PRETZ STICK SALTED 31G", "confidence": 1.0}
-3. Input: "GLICO CAPLICO STRAWBERRY 30G"
-   Output: {"brand": "GLICO", "flavour": "STRAWBERRY", "size": "30G", "product_form": "SNACK", "is_sugar_free": false, "base_item": "GLICO CAPLICO SNACK STRAWBERRY 30G", "confidence": 1.0}
-4. Input: "KINDER HAPPY HIPPO 20.7G"
-   Output: {"brand": "KINDER", "flavour": "HAZELNUT", "size": "20.7G", "product_form": "HIPPO", "is_sugar_free": false, "base_item": "KINDER HAPPY HIPPO 20.7G", "confidence": 1.0}
-5. Input: "WALKERS SHORTBREAD FINGERS 150G"
-   Output: {"brand": "WALKERS", "flavour": "ORIGINAL", "size": "150G", "product_form": "FINGER", "is_sugar_free": false, "base_item": "WALKERS SHORTBREAD FINGER 150G", "confidence": 1.0}
-6. Input: "MARYLAND CHOC CHIP HAZELNUT 200G"
-   Output: {"brand": "MARYLAND", "flavour": "CHOCOLATE CHIP HAZELNUT", "size": "200G", "product_form": "COOKIE", "is_sugar_free": false, "base_item": "MARYLAND COOKIE CHOC CHIP HAZELNUT 200G", "confidence": 1.0}
-7. Input: "VFOODS DONUT STRAWBERRY 100G"
-   Output: {"brand": "VFOODS", "flavour": "STRAWBERRY", "size": "100G", "product_form": "DONUT", "is_sugar_free": false, "base_item": "VFOODS DONUT STRAWBERRY 100G", "confidence": 1.0}
-8. Input: "MEIJI YAN YAN CHOCO 50G"
-   Output: {"brand": "MEIJI", "product_line": "YAN YAN", "flavour": "CHOCOLATE", "size": "50G", "product_form": "SNACK", "is_sugar_free": false, "base_item": "MEIJI YAN YAN SNACK CHOCOLATE 50G", "confidence": 1.0}
-9. Input: "MEIJI HELLO PANDA CHOCO 50G"
-   Output: {"brand": "MEIJI", "product_line": "HELLO PANDA", "flavour": "CHOCOLATE", "size": "50G", "product_form": "SNACK", "is_sugar_free": false, "base_item": "MEIJI HELLO PANDA SNACK CHOCOLATE 50G", "confidence": 1.0}
+1. Input: "MUNCHYS OATKRUNCH S/BERRY&B/CURR 390G"
+   Output: {
+  "brand": "MUNCHYS",
+  "product_line": "OAT KRUNCH",
+  "flavour": "STRAWBERRY & BLACKCURRANT",
+  "variant": "REGULAR",
+  "size": "390G",
+  "product_form": "BISCUIT",
+  "is_sugar_free": false,
+  "base_item": "MUNCHYS OAT KRUNCH BISCUIT STRAWBERRY & BLACKCURRANT 390G",
+  "confidence": 1.0
+}
 
-Rules:
-1. Identify BRAND, FLAVOUR, PRODUCT FORM, and SIZE strictly.
-2. The "base_item" MUST include the Product Form (e.g., STICK, WAFER, BISCUIT, SNACK, DONUT) if present in the raw text.
-3. FLAVOUR STRICTNESS: Every distinct flavour change (CHOCOLATE vs PEANUT vs HAZELNUT vs VANILLA) MUST result in a different flavour field. Do Not generalize.
-4. PRODUCT FORM/TYPE STRICTNESS: Treat STICK, WAFER, ROLL, BISCUIT, SNACK, DONUT, HIPPO, TRONKY, MARIE, and CRACKER as distinct forms.
-5. FLAVOUR/VARIANT STRICTNESS: "CREAM CRACKER" and "SUGAR CRACKER" are DIFFERENT. "CHOCOLATE BEAN" and "CHOCOLATE BUTTER" are DIFFERENT. "VEGETABLE" and "SUGAR" are DIFFERENT.
-6. ASSORTED PRODUCTS: Different Assorted names (e.g., "Prime Selection" vs "Party Biscuit") are DIFFERENT. Do NOT merge them.
-7. NESTED FLAVOURS: Always keep the most specific flavour description. If an item says "CHOCOLATE BEAN", the flavour is "CHOCOLATE BEAN", not "CHOCOLATE".
-8. PRODUCT LINE / SUB-BRAND STRICTNESS (CRITICAL): Items with different model names are DIFFERENT. Examples: "YAN YAN" vs "HELLO PANDA", "DIP DIP" vs "REGULAR", "NEXTAR" vs "MALKIST", "ZOO" vs "ABC", "TOPMIX" vs "FUNMIX", "LINGO" vs "OCHESTRA". Extract these into `product_line`. If a sub-brand name or format like "DIP DIP" or "BUBBLE PUFF" is found, it is MANDATORY to put it in `product_line`.
-9. VARIANT STRICTNESS (CRITICAL): Keywords like "DIPPED", "DOUBLE STUF", "THIN", "CRUNCHIES", "SNOWY", "TRIPLE", "RAINBOW", "GLUTEN FREE", "ORGANIC", "DIP DIP", and "BUBBLE PUFF" are NOT general marketing terms; they are distinctive variants or identities. You MUST extract these into `product_line` or `product_form`. Items with these keywords MUST never merge with regular versions.
-10. FLAVOUR GRANULARITY: Specific rice types like "BERAS KUNING" vs "BERAS PUTIH" are DIFFERENT flavours.
-11. Remove generic marketing terms (e.g., "Family Pack", "MPACK") but PROTECT product identity words.
-12. Output STRICT JSON only.
+2. Input: "SKINNY BAKERS COOKIE SLTED CRML CHOC CHIP CKS 80G"
+   Output: {
+  "brand": "THE SKINNY BAKER",
+  "product_line": "COOKIES",
+  "flavour": "SALTED CARAMEL CHOCOLATE CHIP",
+  "variant": "REGULAR",
+  "size": "80G",
+  "product_form": "COOKIE",
+  "is_sugar_free": false,
+  "base_item": "THE SKINNY BAKER COOKIE SALTED CARAMEL CHOCOLATE CHIP 80G",
+  "confidence": 1.0
+}
+
+3. Input: "THE SKINNY BAKER SKINNY BAKERS S/SALT PISTACHIO CHOC CHIP CKS 150G"
+   Output: {
+  "brand": "THE SKINNY BAKER",
+  "product_line": "SKINNY BAKERS",
+  "flavour": "SEA SALT PISTACHIO CHOCOLATE CHIP",
+  "variant": "REGULAR",
+  "size": "150G",
+  "product_form": "COOKIE",
+  "is_sugar_free": false,
+  "base_item": "THE SKINNY BAKER SKINNY BAKERS COOKIE SEA SALT PISTACHIO CHOCOLATE CHIP 150G",
+  "confidence": 1.0
+}
+
+4. Input: "LOTTE PEPERO SNOWY ALMOND 32G"
+   Output: {
+  "brand": "LOTTE",
+  "product_line": "PEPERO",
+  "flavour": "ALMOND",
+  "variant": "SNOWY",
+  "size": "32G",
+  "product_form": "STICK",
+  "is_sugar_free": false,
+  "base_item": "LOTTE PEPERO STICK SNOWY ALMOND 32G",
+  "confidence": 1.0
+}
+
+5. Input: "GLICO POCKY CHOCOLATE GOKUBOSO 71G"
+   Output: {
+  "brand": "GLICO",
+  "product_line": "POCKY",
+  "flavour": "CHOCOLATE",
+  "variant": "GOKUBOSO",
+  "size": "71G",
+  "product_form": "STICK",
+  "is_sugar_free": false,
+  "base_item": "GLICO POCKY STICK CHOCOLATE GOKUBOSO 71G",
+  "confidence": 1.0
+}
+
+6. Input: "NABATI NEXTAR BROWNIES CHOCOLATE 106G"
+   Output: {
+  "brand": "NABATI",
+  "product_line": "NEXTAR",
+  "flavour": "CHOCOLATE",
+  "variant": "BROWNIES",
+  "size": "106G",
+  "product_form": "BISCUIT",
+  "is_sugar_free": false,
+  "base_item": "NABATI NEXTAR BISCUIT CHOCOLATE 106G",
+  "confidence": 1.0
+}
+
+7. Input: "HUP SENG CRM CRACKER 428GMX12"
+   Output: {
+  "brand": "HUP SENG",
+  "product_line": "CREAM CRACKERS",
+  "flavour": "NORMAL",
+  "variant": "REGULAR",
+  "size": "428GMX12",
+  "product_form": "CRACKER",
+  "is_sugar_free": false,
+  "base_item": "HUP SENG CREAM CRACKERS 428GMX12",
+  "confidence": 1.0
+}
+
+8. Input: "JULIE CHEESE STICKS 4.5KG"
+   Output: {
+  "brand": "JULIES",
+  "product_line": "CHEESE STICKS",
+  "flavour": "CHEESE",
+  "variant": "REGULAR",
+  "size": "4500G",
+  "product_form": "STICK",
+  "is_sugar_free": false,
+  "base_item": "JULIES STICK CHEESE 4500G",
+  "confidence": 1.0
+}
+
+9. Input: "BOURBON BUTTER COOKIES 9PCS 100G"
+   Output: {
+  "brand": "BOURBON",
+  "product_line": "COOKIES",
+  "flavour": "BUTTER",
+  "variant": "REGULAR",
+  "size": "100G",
+  "product_form": "BISCUIT",
+  "is_sugar_free": false,
+  "base_item": "BOURBON BISCUIT BUTTER 100G",
+  "confidence": 1.0
+}
+
+### GOAL:
+Extract "brand", "flavour", "variant", "size", "product_line", "product_form", "is_sugar_free" and "base_item" as JSON.
+
+IMPORTANT: 
+1. The "flavour" field MUST contain ALL flavor-related keywords (e.g., SEA SALT, PISTACHIO, HAZELNUT, CARAMEL). Never omit them.
+2. **STRICT LITERAL SIZE EXTRACTION**: The "size" field must be extracted in a standardized numeric form if possible (e.g., convert '4.5KG' to '4500G', '320ML' to '320ML'). For simple cases like '130G', keep it as '130G'.
+3. **SPELING TOLERANCE**: Always normalize brand names to their most common full form (e.g., 'JULIE' -> 'JULIES').
+4. **MPACK Awareness**: If the description mentions a pack count (e.g., 12S, 12X, *12, X12), include it in the size string exactly as written.
+5. **PUNCTUATION REMOVAL**: NEVER include apostrophes (') or backticks (`) in brand or product_line names. (e.g. "O'SOY" -> "OSOY").
+6. **PIECE COUNT REMOVAL**: Piece counts (e.g., 9PCS, 10 PCS) are NOT part of the product line, flavor, or variant.
+7. **PLURAL NORMALIZATION**: Always use singular form for "product_form" and "product_line" if possible (e.g., "CRACKERS" -> "CRACKER", "COOKIES" -> "COOKIE", "STICKS" -> "STICK").
+
+Base item must follow this structure:
+BRAND + PRODUCT_LINE (if any) + PRODUCT_FORM + FLAVOUR + VARIANT (if not REGULAR) + SIZE
 
 """
     
@@ -536,9 +658,10 @@ ITEM DESCRIPTION: "{item}"
 Return JSON only:
 {{
   "brand": "Standardized Brand Name (e.g., NABATI, MEIJI)",
-  "product_line": "Specific Sub-Brand or Line (e.g., NEXTAR, MALKIST, YAN YAN, HELLO PANDA, LINGO, OCHESTRA, TOPMIX, FUNMIX)",
-  "flavour": "Standardized Flavour Name (e.g., SWEET & SOUR STRAWBERRY)",
-  "product_form": "Standardized Form (e.g., STICK, WAFER, BISCUIT, RICE CRISPY, ROLL)",
+  "product_line": "Specific Sub-Brand or Line (e.g., NEXTAR, MALKIST, YAN YAN, HELLO PANDA, OAT KRUNCH, TIM TAM, PEPERO)",
+  "flavour": "Standardized Flavour Name (e.g., STRAWBERRY & BLACKCURRANT)",
+  "variant": "Standardized Variant (e.g., REGULAR, SNOWY, MINI, GOLD, GOKUBOSO, FESTIVE)",
+  "product_form": "Standardized Form (e.g., STICK, WAFER, BISCUIT, COOKIE, ROLL)",
   "is_sugar_free": boolean,
   "size": "Standardized Size (e.g., 320ML, 500G)",
   "base_item": "Standardized Full Generic Name (Include weight)",
@@ -586,6 +709,7 @@ Return JSON only:
         data = {
             "brand": "",
             "flavour": "",
+            "variant": "REGULAR",
             "size": "",
             "base_item": item,
             "removed_marketing_terms": [],
@@ -596,17 +720,130 @@ Return JSON only:
         # Fallback to default
         data = {
             "brand": "",
-            "flavour": "",
+            "product_line": "",
+            "flavour": "NORMAL",
+            "variant": "REGULAR",
             "size": "",
+            "product_form": "",
             "base_item": item,
+            "is_sugar_free": False,
             "removed_marketing_terms": [],
             "confidence": 0.0
         }
     
-    # 3. Save to both caches only if we got a valid result
-    if data.get("confidence", 0) > 0:
-        llm_cache[item] = data
-        save_to_llm_cache(item, data)
+    # 🚨 RULE-LAYER GUARDS (USE ONLY AS FALLBACK FOR GENERIC/MISSING DATA)
+    
+    # 1. Brand-First Protection (For "ORI")
+    trimmed_item = item.strip().upper()
+    if trimmed_item.startswith("ORI "):
+        if not data.get("brand") or data["brand"] in ["ORIGINAL", "UNKNOWN", ""]:
+            data["brand"] = "ORI"
+            if data.get("flavour") == "ORI":
+                data["flavour"] = "NORMAL"
+
+    # Only apply flavor/variant guards if the LLM output is generic or empty
+    current_flv = str(data.get("flavour", "")).upper()
+    current_var = str(data.get("variant", "")).upper()
+    
+    is_generic = current_flv in ["NORMAL", "UNKNOWN", "", "NONE", "CHOCOLATE", None]
+    
+    clean_raw = normalize_synonyms(item).upper()
+
+    if is_generic:
+        # High-priority compound descriptors
+        compounds = [
+            "SEA SALT PISTACHIO", "SEA SALT HAZELNUT", "SALTED CARAMEL", 
+            "DARK CHOCOLATE", "WHITE CHOCOLATE", "MILK CHOCOLATE", 
+            "SEA SALT CHOC CHIP", "SALTED VANILLA", "CHUNKY HAZELNUT",
+            "COOKIES & CREAM", "DOUBLE CHOCOLATE", "SOUR CREAM & ONION"
+        ]
+        for cp in compounds:
+            if cp in clean_raw:
+                data["flavour"] = cp
+                print(f"Rule Guard: Restored compound flavour '{cp}' for '{item}'")
+                break
+        
+        # Basic flavor fallback only if STILL generic after compound check
+        if data["flavour"] in ["NORMAL", "UNKNOWN", "", None]:
+            basic_flavours = [
+                "STRAWBERRY", "CHOCOLATE", "VANILLA", "CHEESE", "BUTTER", "ALMOND", 
+                "HAZELNUT", "LEMON", "DURIAN", "PINEAPPLE", "COFFEE", "ORANGE"
+            ]
+            for bf in basic_flavours:
+                if bf in clean_raw:
+                    data["flavour"] = bf
+                    break
+
+    # 2. Variant Protection (Missed sub-variants)
+    if current_var in ["REGULAR", ""]:
+        variants = ["GOKUBOSO", "CHUNKY", "ORGANIC", "EXTRA THIN", "SNOWY", "MINI"]
+        for v in variants:
+            if v in clean_raw:
+                data["variant"] = v
+                break
+
+    # 3. Brand Overrides
+    if "ALL TIME" in clean_raw and not data.get("brand"):
+        data["brand"] = "ALL TIME"
+
+    # Apply final guards before returning/caching
+    data = apply_llm_rule_guards(item, data)
+
+    # Save to persistent cache and in-memory cache
+    save_to_llm_cache(item, data)
+    llm_cache[item] = data
+    return data
+
+def apply_llm_rule_guards(item, data):
+    """
+    Apply mandatory rules to LLM output to fix known inconsistencies.
+    """
+    clean_raw = normalize_synonyms(item).upper()
+    
+    # 1. Brand Normalization
+    final_brand = str(data.get("brand", "")).upper().strip()
+    brand_map = {
+        "JULIE": "JULIES", "JULYS": "JULIES", "JULI": "JULIES",
+        "HUPSENG": "HUP SENG", "HS": "HUP SENG"
+    }
+    if final_brand in brand_map:
+        data["brand"] = brand_map[final_brand]
+    
+    if clean_raw.startswith("JULIE") and (not final_brand or final_brand in ["UNKNOWN", "NORMAL", ""]):
+        data["brand"] = "JULIES"
+
+    # ✅ BIO GREEN Normalization
+    if "BIOGREEN" in clean_raw or "BIO GREEN" in clean_raw:
+        if not final_brand or final_brand in ["UNKNOWN", "NORMAL", "OTHERS", ""]:
+            data["brand"] = "BIO GREEN"
+
+    # ✅ LEE BRANDS Normalization
+    if "LEE" in clean_raw:
+        if not final_brand or final_brand in ["UNKNOWN", "NORMAL", "LEE", ""]:
+            data["brand"] = "LEE BRANDS"
+
+    # 2. Size Normalization (Standardize units for large packs)
+    current_size = str(data.get("size", "")).upper().replace(" ", "")
+    # KG to G conversion for consistency (e.g., 4.5KG -> 4500G)
+    if "KG" in current_size:
+        try:
+            val_match = re.search(r'(\d*\.?\d+)\s*KG', current_size)
+            if val_match:
+                val = float(val_match.group(1))
+                data["size"] = f"{int(val * 1000)}G"
+        except: pass
+
+    # 3. Punctuation Strip Fallback (Ensure no ' or ` in fields)
+    for field in ["brand", "product_line", "flavour", "variant", "product_form"]:
+        if field in data and isinstance(data[field], str):
+            data[field] = data[field].replace("'", "").replace("`", "")
+            # ✅ Strip piece counts from fields (e.g. "COOKIES 9PCS" -> "COOKIES")
+            data[field] = re.sub(r'\b\d+\s*PCS\b', '', data[field], flags=re.IGNORECASE).strip()
+            # ✅ Plural Normalization (e.g. CRACKERS -> CRACKER)
+            for plur, sing in [("CRACKERS", "CRACKER"), ("COOKIES", "COOKIE"), ("STICKS", "STICK")]:
+                data[field] = re.sub(rf'\b{plur}\b', sing, data[field], flags=re.IGNORECASE).strip()
+
+    # 4. Flavour/Variant Fallbacks
     return data
 
 
@@ -626,7 +863,7 @@ def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
     ))
 
     
-    base["merged_from_docs"] = base.get("merged_from_docs", 0) + len(group_docs)
+    base["merged_from_docs"] = sum(d.get("merged_from_docs", 1) for d in group_docs)
     
     prev_rule = base.get("merge_rule")
     base["merge_rule"] = (
@@ -646,11 +883,11 @@ def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
 def simple_clean_item(name):
     """Fallback cleaner for when AI fails. Extracts and sorts unique keywords."""
     if not name: return ""
-    s = str(name).upper()
+    s = str(name).upper().replace("-", "") # 🚨 Strip hyphens to match 'PRE-BALANCE' with 'PREBALANCE'
     # Normalize synonyms FIRST
     s = normalize_synonyms(s)
     # Remove very common noise words only
-    for word in ["ITEM", "PACK", "FLAVOUR", "FLV", "BRAND"]:
+    for word in ["ITEM", "PACK", "FLAVOUR", "FLV", "BRAND", "PCS"]:
         s = s.replace(word, " ")
     # Take alphanumeric words only and sort them
     words = sorted(list(set(re.findall(r'[A-Z0-9]+', s))))
@@ -803,6 +1040,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         llm_brand = str(norm.get("brand", "UNKNOWN")).upper()
         llm_form = str(norm.get("product_form", "UNKNOWN")).upper()
         llm_flavour = str(norm.get("flavour", "UNKNOWN")).upper()
+        llm_variant = str(norm.get("variant", "REGULAR")).upper() # Safeguard: Default to REGULAR
         
         if norm.get("confidence", 0) >= LLM_CONFIDENCE_THRESHOLD:
             # HIGH CONFIDENCE: Use LLM Attributes
@@ -824,12 +1062,13 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 clean_sig = simple_clean_item(item)
                 pre_group_key = (
                     f"LOW_CONF|{llm_brand}|{clean_sig}|"
-                    f"{market_val}|{mpack_val}|{facts_val}"
+                    f"{market_val}|{mpack_val}|{facts_val}|{norm.get('size', 'UNKNOWN')}"
                 )
             else:
+                # ✅ ADDED LLM_VARIANT and MPACK to HI_CONF key
                 pre_group_key = (
-                    f"HI_CONF|{llm_brand}|{llm_line}|{llm_form}|{llm_flavour}|{is_sf}|"
-                    f"{market_val}|{mpack_val}|{facts_val}{assorted_guard}"
+                    f"HI_CONF|{llm_brand}|{llm_line}|{llm_form}|{llm_flavour}|{llm_variant}|{is_sf}|"
+                    f"{market_val}|{mpack_val}|{facts_val}|{norm.get('size', 'UNKNOWN')}{assorted_guard}"
                 )
         else:
             # FIX 2: Safer LOW_CONF Fallback (Do not blindly merge)
@@ -837,7 +1076,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             clean_sig = simple_clean_item(item)
             pre_group_key = (
                 f"LOW_CONF|{llm_brand}|{clean_sig}|"
-                f"{market_val}|{mpack_val}|{facts_val}"
+                f"{market_val}|{mpack_val}|{facts_val}|{norm.get('size', 'UNKNOWN')}"
             )
 
             
@@ -896,6 +1135,11 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                     continue
                 if p1 and p2 and p1 != "UNKNOWN" and p2 != "UNKNOWN" and p1 != p2:
                     continue
+                
+                # 🚨 STRICT SIZE GUARD: Never merge items with different sizes in Mastering
+                s1, s2 = str(norm1.get('size', '')).upper().strip(), str(norm2.get('size', '')).upper().strip()
+                if s1 and s2 and s1 not in ["UNKNOWN", "NONE", ""] and s2 not in ["UNKNOWN", "NONE", ""] and s1 != s2:
+                    continue
 
                 sig1 = simple_clean_item(item1)
                 sig2 = simple_clean_item(item2)
@@ -921,34 +1165,8 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         pass
 
 
-    # Apply Size Tolerance (5g Rules) within each Brand+Flavour+Market bucket
-    final_groups_list = []
-    
-    for pg_key, pg_docs in pre_groups.items():
-        # Add numeric size for tolerance check
-        for d in pg_docs:
-            # item is used to look up norm
-            norm = norm_map.get(d.get("ITEM"), {})
-            d["_size_val"] = extract_size_val(norm.get("size", ""))
-            
-        # Sort by size
-        pg_docs.sort(key=lambda x: x["_size_val"])
-        
-        # Bucketing
-        current_bucket = []
-        for d in pg_docs:
-            if not current_bucket:
-                current_bucket.append(d)
-                continue
-            
-            prev_d = current_bucket[-1]
-            if abs(d["_size_val"] - prev_d["_size_val"]) <= 5.0:
-                current_bucket.append(d)
-            else:
-                final_groups_list.append(current_bucket)
-                current_bucket = [d]
-        if current_bucket:
-            final_groups_list.append(current_bucket)
+    # ✅ REMOVED: Size Tolerance (5g Rules) - Now using exact size in pre_group_key
+    final_groups_list = list(pre_groups.values())
 
     # print(f"Clusters formed after size tolerance: {len(final_groups_list)}")
 
@@ -964,6 +1182,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         valid_subgroups = [cluster_docs] # Default is one group
         
         if len(cluster_docs) > 1:
+            # 1. FAMILY GUARD (Product Line)
             families_map = {} # fam -> list of docs
             for d in cluster_docs:
                 norm = norm_map.get(d.get("ITEM"), {})
@@ -975,6 +1194,51 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             if len(families_map) > 1:
                 # print(f"⚠️ AUDIT ALERT: Found {len(families_map)} families in one cluster {list(families_map.keys())}. Splitting.")
                 valid_subgroups = list(families_map.values())
+            else:
+                # 2. HARD FLAVOUR & VARIANT GUARDS (Strict Keyword Splitting)
+                # Priority-ordered list: MORE SPECIFIC flavours FIRST, generic ones LAST.
+                # This prevents "HAZELNUT CHOC CHIP" from being grouped with "DOUBLE CHOC CHIP".
+                FLAVOUR_CONFLICTS_PRIORITY = [
+                    # Tier 1: Highly specific compound flavours (check first)
+                    "SALTED CARAMEL", "DARK CHOCOLATE", "DARK CHOCO", "NUTTY CHOCO",
+                    "CHIA SEED", "CHOCOLATE CHIP", "CHOC CHIP",
+                    # Tier 2: Specific single-ingredient flavours (check before generic CHOCOLATE)
+                    "MACADAMIA", "PISTACHIO", "HAZELNUT", "CRANBERRY", "ALMOND",
+                    "BLUEBERRY", "STRAWBERRY", "PINEAPPLE", "APPLE", "LEMON",
+                    "COCONUT", "PEANUT", "GOJI", "RAISIN", "MATCHA",
+                    # Tier 3: Generic flavours (check last)
+                    "VANILLA", "SALTED", "CHOCOLATE", "CHEESE", "BUTTER",
+                ]
+                
+                VARIANT_CONFLICTS = [
+                    "GOKUBOSO", "MINI", "GIANT", "PREMIUM", "GOLD", "FESTIVE", "SNOWY"
+                ]
+                
+                # Helper to find which conflict keyword exists in item name
+                # Uses PRIORITY ORDER (not length order) to ensure specific flavours win
+                def get_conflict_key(name, conflict_list):
+                    # 🚨 Use normalized name to catch typos (MACADMIA -> MACADAMIA, HZLNT -> HAZELNUT)
+                    name_up = normalize_synonyms(name).upper()
+                    # Iterate in PRIORITY ORDER (most specific first)
+                    for k in conflict_list:
+                        if re.search(rf"\b{re.escape(k)}\b", name_up):
+                            return k
+                    return None
+
+                flav_groups = {} # key -> docs
+                
+                for d in cluster_docs:
+                    item_name = d.get("ITEM", "")
+                    fk = get_conflict_key(item_name, FLAVOUR_CONFLICTS_PRIORITY) or "OTHER_FLAV"
+                    vk = get_conflict_key(item_name, VARIANT_CONFLICTS) or "OTHER_VAR"
+                    
+                    # Create a composite key for flavour + variant grouping
+                    comp_key = f"{fk}|{vk}"
+                    flav_groups.setdefault(comp_key, []).append(d)
+                
+                if len(flav_groups) > 1:
+                    # print(f"⚠️ HARD GUARD: Forced split for {len(flav_groups)} sub-variants in current cluster")
+                    valid_subgroups = list(flav_groups.values())
 
         for group_docs in valid_subgroups:
             # Sort group docs by 'Facts' priority: prefer 'Sales Value' as the descriptive base
@@ -1033,7 +1297,22 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 continue
 
             # Merge multiple items
-            base = copy.deepcopy(group_docs[0])
+            # 🚀 Main UPC Business Rule: Select record with highest 'MAT Nov'24' as base
+            mat_col = next((k for k in group_docs[0] if "mat" in k.lower()), "MAT Nov'24")
+            
+            def get_mat_val(d):
+                try:
+                    v = d.get(mat_col, 0)
+                    return float(v) if not pd.isna(v) else 0.0
+                except: return 0.0
+
+            # Find the record with max MAT stock
+            leader_doc = max(group_docs, key=get_mat_val)
+            
+            # ✅ AUDIT LOG: Show the business logic in action
+            print(f"   [Logic] Merging {len(group_docs)} items under Main_UPC: {leader_doc.get('UPC')} ({leader_doc.get('ITEM')[:30]}...) | MAT Stock: {get_mat_val(leader_doc)}")
+
+            base = copy.deepcopy(leader_doc)
             base.pop("_id", None)
             base.pop("_norm", None)
             
@@ -1052,6 +1331,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                             base[m] += f_val
                     except (ValueError, TypeError):
                         pass
+
             
             # Get norm from first item
             item_name = group_docs[0].get("ITEM")
@@ -1064,8 +1344,9 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             # Generate merge_id AFTER BRAND is set
             base["merge_id"] = base.get("merge_id") or f"{base['BRAND']}_{uuid.uuid4().hex}"
             
-            # Store LLM extracted fields (flavour, size are not duplicates)
+            # Store LLM extracted fields (flavour, variant, size are not duplicates)
             base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
+            base["variant"] = norm.get("variant") or "REGULAR"
             base["product_form"] = norm.get("product_form") or "UNKNOWN"
             base["size"] = norm.get("size") or base.get("NRMSIZE", "")
             base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")
@@ -1074,7 +1355,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             extend_merge_metadata(
                 base=base,
                 group_docs=group_docs,
-                merge_rule="BRAND+FLAVOUR+SIZE (LLM) + STRICT KEYS",
+                merge_rule="BRAND+FLAVOUR+VARIANT+SIZE (LLM) + STRICT KEYS",
                 merge_level="MASTER_PRODUCT_MERGE"
             )
 

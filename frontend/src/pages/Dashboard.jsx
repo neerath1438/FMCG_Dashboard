@@ -46,6 +46,7 @@ const CircularProgress = ({ percentage = 0, size = 48, strokeWidth = 4 }) => {
 
 const Dashboard = () => {
     const [summary, setSummary] = useState(null);
+    const [auditCounts, setAuditCounts] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const [exporting, setExporting] = useState(false);
@@ -57,8 +58,12 @@ const Dashboard = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const summaryData = await dashboardAPI.getSummary();
+            const [summaryData, auditData] = await Promise.all([
+                dashboardAPI.getSummary(),
+                dashboardAPI.getAuditCounts()
+            ]);
             setSummary(summaryData?.data || summaryData);
+            setAuditCounts(auditData?.data || auditData);
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
         } finally {
@@ -360,6 +365,131 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Nielsen Audit Dashboard Section */}
+            {auditCounts && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-gray-900">Nielsen Audit Dashboard</h2>
+                        <Badge variant="glass-info" size="sm">Data Flow Analysis</Badge>
+                    </div>
+
+                    {/* Audit Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Raw Nielsen */}
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 shadow-sm border border-blue-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-blue-700 uppercase">1. Raw Nielsen</span>
+                                <Package size={16} className="text-blue-600" />
+                            </div>
+                            <p className="text-3xl font-bold text-blue-900">{auditCounts.raw_nielsen.toLocaleString()}</p>
+                            <p className="text-xs text-blue-600 mt-1">Sales Value Data</p>
+                        </div>
+
+                        {/* Single Stock */}
+                        <div
+                            className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-5 shadow-sm border border-indigo-200 cursor-pointer hover:shadow-lg transition-all"
+                            onClick={() => navigate('/products?view=filtered')}
+                            title="Click to view filtered records"
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-indigo-700 uppercase">2. Single Stock</span>
+                                <TrendingUp size={16} className="text-indigo-600" />
+                            </div>
+                            <p className="text-3xl font-bold text-indigo-900">{auditCounts.single_stock.toLocaleString()}</p>
+                            <p className="text-xs text-indigo-600 mt-1">Filtered: -{(auditCounts.raw_nielsen - auditCounts.single_stock)}</p>
+                        </div>
+
+                        {/* Master Stock */}
+                        <div
+                            className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-5 shadow-sm border border-purple-200 cursor-pointer hover:shadow-lg transition-all"
+                            onClick={() => navigate('/products?view=merged')}
+                            title="Click to view merged products"
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-purple-700 uppercase">3. Master Stock</span>
+                                <Zap size={16} className="text-purple-600" />
+                            </div>
+                            <p className="text-3xl font-bold text-purple-900">{auditCounts.master_stock.toLocaleString()}</p>
+                            <p className="text-xs text-purple-600 mt-1">Merged: -{(auditCounts.single_stock - auditCounts.master_stock)}</p>
+                        </div>
+
+                        {/* AI Enriched */}
+                        <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl p-5 shadow-sm border border-pink-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-pink-700 uppercase">4. AI Enriched</span>
+                                <Users size={16} className="text-pink-600" />
+                            </div>
+                            <p className="text-3xl font-bold text-pink-900">{auditCounts.ai_enriched.toLocaleString()}</p>
+                            <p className="text-xs text-pink-600 mt-1">7-Eleven Partner</p>
+                        </div>
+
+                        {/* Carried Items */}
+                        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-5 shadow-sm border border-emerald-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-emerald-700 uppercase">5. Carried Items</span>
+                                <TrendingUp size={16} className="text-emerald-600" />
+                            </div>
+                            <p className="text-3xl font-bold text-emerald-900">{auditCounts.carried.toLocaleString()}</p>
+                            <p className="text-xs text-emerald-600 mt-1">Matched Products</p>
+                        </div>
+
+                        {/* Nielsen Gaps */}
+                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-5 shadow-sm border border-orange-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-orange-700 uppercase">6. 7-Eleven Gaps</span>
+                                <Bell size={16} className="text-orange-600" />
+                            </div>
+                            <p className="text-3xl font-bold text-orange-900">{auditCounts.gaps.toLocaleString()}</p>
+                            <p className="text-xs text-orange-600 mt-1">Gap Opportunities</p>
+                        </div>
+
+                        {/* 7-Eleven Unique */}
+                        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-5 shadow-sm border border-cyan-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold text-cyan-700 uppercase">7. 7-Eleven Unique</span>
+                                <Package size={16} className="text-cyan-600" />
+                            </div>
+                            <p className="text-3xl font-bold text-cyan-900">{auditCounts.seven_eleven_unique.toLocaleString()}</p>
+                            <p className="text-xs text-cyan-600 mt-1">Exclusive Items</p>
+                        </div>
+                    </div>
+
+                    {/* Data Flow Visualization */}
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Data Reduction Funnel</h3>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="text-center flex-1">
+                                <div className="w-full h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    {auditCounts.raw_nielsen.toLocaleString()}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">Raw Data</p>
+                            </div>
+                            <ArrowRight className="text-gray-400" size={20} />
+                            <div className="text-center flex-1">
+                                <div className="w-full h-16 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    {auditCounts.single_stock.toLocaleString()}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">Single Stock</p>
+                            </div>
+                            <ArrowRight className="text-gray-400" size={20} />
+                            <div className="text-center flex-1">
+                                <div className="w-full h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    {auditCounts.master_stock.toLocaleString()}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">Master Stock</p>
+                            </div>
+                            <ArrowRight className="text-gray-400" size={20} />
+                            <div className="text-center flex-1">
+                                <div className="w-full h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    {auditCounts.gaps.toLocaleString()}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">Final Gaps</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );
