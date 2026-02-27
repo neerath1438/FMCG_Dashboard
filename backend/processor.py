@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np  # ✅ For vectorized bucketing
+import numpy as np  # For vectorized bucketing
 import re
 import uuid
 import json
@@ -27,10 +27,29 @@ OPENAI_MODEL = "gpt-4o-mini"
 # LLM cache to avoid duplicate API calls
 llm_cache = {}
 
-def normalize_synonyms(text):
+def normalize_mpack(mpack_str: str) -> str:
+    """Normalize X1, 1, 1X, 1S into X1. Ignores high piece counts like 32P."""
+    if not mpack_str: return "X1"
+    s = str(mpack_str).upper().replace(" ", "").replace("(", "").replace(")", "")
+    
+    # Ignore piece counts like 32P, 14PCS if they are likely internal pieces
+    if re.search(r'(\d+)(P|PCS)$', s):
+        val = int(re.search(r'(\d+)', s).group(1))
+        if val > 10: # If more than 10 pieces, it's likely internal, not a multipack
+            return "X1"
+
+    # Remove 'S' if it follows a number (e.g., 6S -> 6)
+    s = re.sub(r'(\d+)S$', r'\1', s)
+    # Extract digit
+    match = re.search(r'(\d+)', s)
+    if match:
+        return f"X{match.group(1)}"
+    return "X1"
+
+def normalize_synonyms(item_name: str) -> str:
     """Normalize common FMCG synonyms to improve fuzzy matching."""
-    if not text: return ""
-    s = str(text).upper()
+    if not item_name: return ""
+    s = str(item_name).upper()
     # ✅ Add space between letters and numbers (e.g., OAT600G -> OAT 600G)
     s = re.sub(r'([A-Z])(\d)', r'\1 \2', s)
     s = re.sub(r'(\d)([A-Z])', r'\1 \2', s)
@@ -38,15 +57,16 @@ def normalize_synonyms(text):
     s = s.replace("'", "").replace("`", "")
     # ✅ Remove Piece Counts (e.g., 9PCS, 10 PCS) - they often vary between same items
     s = re.sub(r'\b\d+\s*PCS\b', ' ', s)
-    # ✅ Separate multipliers (e.g., 428GMX12 -> 428 GM X 12)
-    s = re.sub(r'([A-Z])([X\*])', r'\1 \2', s)
-    s = re.sub(r'([X\*])([A-Z])', r'\1 \2', s)
+    # ✅ Separate multipliers safely (e.g., 428GMX12 -> 428 GM X 12)
+    # Only split if X is near a digit to avoid splitting words like LEXUS
     s = re.sub(r'(\d)([X\*])', r'\1 \2', s)
     s = re.sub(r'([X\*])(\d)', r'\1 \2', s)
+    # Handle GMX12 case specifically without splitting LEXUS
+    s = re.sub(r'([A-Z]{2,})([X\*])(\d+)', r'\1 \2 \3', s)
     
     # Define synonym maps
     syns = {
-        "CHOCOLATE": ["COCOA", "CHOC", "CHOCO", "COK"],
+        "CHOCOLATE": ["COCOA", "CHOC", "CHOCO", "COK", "CHCO"],
         "STRAWBERRY": ["S/BERRY", "SBERRY", "STRWB", "STRW", "S/BERY"],
         "VANILLA": ["VAN", "VNL", "VNLA"],
         "PEANUT": ["PNUT", "PNT", "P-NUT"],
@@ -60,10 +80,12 @@ def normalize_synonyms(text):
         "HAZELNUT": ["HZLNT", "HZLNUT", "H/NUT"],
         "PISTACHIO": ["PSTCHIO", "PISTCH"],
         "GRAM": ["GM", "GMS", "G"],
-        "BISCUIT": ["BISCUITS", "COOKIES", "COOKIE", "SNACK", "SNACKS", "STICK", "STICKS", "STIX"],
-        "CRACKER": ["CRACKERS"],
-        "CREAM": ["CRM", "CREME"],
-        "JULIES": ["JULIE", "JULI", "JULYS"],
+        "JULIES": ["JULIE S", "JULIES", "JULIE", "JULI", "JULYS"],
+        "SANDWICH": ["S/WICH", "SWICH", "SANDWICHES"],
+        "LEMOND": ["LE-MOND"],
+        "DOUBLE STUF": ["DOUBLESTUF", "DOUBLE STUFF", "DBLE STUF", "DBLE STUFF"],
+        "CRUNCHY BITES": ["CRUNCHIES", "CRUNCHY"],
+        "OAT 25": ["OAT25"],
     }
     for primary, aliases in syns.items():
         for alias in aliases:
@@ -313,7 +335,7 @@ async def process_nielsen_dataframe(df, sheet_name, request=None):
             progress = min(i + 5000, total_records)
             if progress % 10000 == 0 or progress == total_records:
                 print(f"[{sheet_name}] MongoDB: Saved {progress}/{total_records} ({(progress/total_records*100):.1f}%)")
-        print(f"[{sheet_name}] ✅ Saved {total_records} records to MongoDB")
+        print(f"[{sheet_name}] Saved {total_records} records to MongoDB")
     
     return {"raw_count": len(df), "single_stock_count": len(single_stock_records)}
 
@@ -367,7 +389,7 @@ async def reprocess_flow_1_from_db():
     """
     Automated Phase for full re-run. Reads from raw_data and populates single_stock_data.
     """
-    print("🔄 Reprocessing Flow 1 from DB (raw_data)...")
+    print("Reprocessing Flow 1 from DB (raw_data)...")
     raw_coll = get_collection(RAW_DATA_COL)
     docs = list(raw_coll.find({}))
     if not docs:
@@ -380,7 +402,7 @@ async def reprocess_flow_1_from_db():
     
     # Process
     await process_nielsen_dataframe(df, "Reprocess_All")
-    print("✅ Reprocessing Flow 1 Complete.")
+    print("Reprocessing Flow 1 Complete.")
 
 
 def normalize_item_llm(item):
@@ -418,7 +440,7 @@ Use these standardized terms for any raw keywords found:
   - {BILIS, ANC} -> ANCHOVY
 
 - FLAVORS & VARIANTS:
-  - {COK, CHOC, CHOCO, COKLAT, CHOKLAT, CHOKIT, COKLIT} -> CHOCOLATE 
+  - {COK, CHOC, CHOCO, COKLAT, CHOKLAT, CHOKIT, COKLIT, CHCO} -> CHOCOLATE 
   (Only when used alone. Do NOT collapse compound flavours like:
    CHOC CHIP, DARK CHOC, WHITE CHOC, SALTED CHOC, MILK CHOC.)
   - {BAN, BNNA, BANANA} -> BANANA
@@ -484,6 +506,7 @@ Use these standardized terms for any raw keywords found:
   - {BIOGREEN, BIO GREEN} -> BIO GREEN
   - {LEE, LEE BRANDS} -> LEE BRANDS
   - {MUNCHYS, MUNCHY} -> MUNCHYS
+  - {NABATI, RICHEESE, NEXTAR} -> NABATI (RICHEESE and NEXTAR are Nabati sub-brands/product lines, not standalone brands. Always set brand=NABATI.)
 
 - PACKAGING:
   - {CAN, CN} -> CAN
@@ -583,16 +606,55 @@ Use these standardized terms for any raw keywords found:
   "confidence": 1.0
 }
 
-6. Input: "NABATI NEXTAR BROWNIES CHOCOLATE 106G"
+6. Input: "NABATI NEXTAR BROWNIES CHOCOLATE 272G"
    Output: {
   "brand": "NABATI",
-  "product_line": "NEXTAR",
+  "product_line": "NEXTAR BROWNIES",
   "flavour": "CHOCOLATE",
-  "variant": "BROWNIES",
+  "variant": "REGULAR",
+  "size": "272G",
+  "product_form": "BISCUIT",
+  "is_sugar_free": false,
+  "base_item": "NABATI NEXTAR BROWNIES BISCUIT CHOCOLATE 272G",
+  "confidence": 1.0
+}
+
+6b. Input: "NABATI FESTIVE NEXTAR BROWNIES 272G"
+    Output: {
+  "brand": "NABATI",
+  "product_line": "NEXTAR BROWNIES",
+  "flavour": "CHOCOLATE",
+  "variant": "REGULAR",
+  "size": "272G",
+  "product_form": "BISCUIT",
+  "is_sugar_free": false,
+  "base_item": "NABATI NEXTAR BROWNIES BISCUIT CHOCOLATE 272G",
+  "confidence": 1.0
+}
+
+6c. Input: "NABATI RICHEESE WAFER 145GM"
+    Output: {
+  "brand": "NABATI",
+  "product_line": "RICHEESE",
+  "flavour": "CHEESE",
+  "variant": "REGULAR",
+  "size": "145G",
+  "product_form": "WAFER",
+  "is_sugar_free": false,
+  "base_item": "NABATI RICHEESE WAFER CHEESE 145G",
+  "confidence": 1.0
+}
+
+6d. Input: "NABATI NEXTAR STRAWBERRY 106G"
+    Output: {
+  "brand": "NABATI",
+  "product_line": "NEXTAR",
+  "flavour": "STRAWBERRY",
+  "variant": "REGULAR",
   "size": "106G",
   "product_form": "BISCUIT",
   "is_sugar_free": false,
-  "base_item": "NABATI NEXTAR BISCUIT CHOCOLATE 106G",
+  "base_item": "NABATI NEXTAR BISCUIT STRAWBERRY 106G",
   "confidence": 1.0
 }
 
@@ -635,6 +697,32 @@ Use these standardized terms for any raw keywords found:
   "confidence": 1.0
 }
 
+10. Input: "BOURBON GOKOKU NO BISCUT 32P 133G"
+    Output: {
+  "brand": "BOURBON",
+  "product_line": "GOKOKU NO BISCUIT",
+  "flavour": "NORMAL",
+  "variant": "REGULAR",
+  "size": "133G",
+  "product_form": "BISCUIT",
+  "is_sugar_free": false,
+  "base_item": "BOURBON GOKOKU NO BISCUIT 133G",
+  "confidence": 1.0
+}
+
+11. Input: "BOURBON CEBEURE (14 X 8 G) 112 G"
+    Output: {
+  "brand": "BOURBON",
+  "product_line": "CEBEURE",
+  "flavour": "NORMAL",
+  "variant": "REGULAR",
+  "size": "112G",
+  "product_form": "BISCUIT",
+  "is_sugar_free": false,
+  "base_item": "BOURBON CEBEURE 112G",
+  "confidence": 1.0
+}
+
 ### GOAL:
 Extract "brand", "flavour", "variant", "size", "product_line", "product_form", "is_sugar_free" and "base_item" as JSON.
 
@@ -658,9 +746,9 @@ ITEM DESCRIPTION: "{item}"
 Return JSON only:
 {{
   "brand": "Standardized Brand Name (e.g., NABATI, MEIJI)",
-  "product_line": "Specific Sub-Brand or Line (e.g., NEXTAR, MALKIST, YAN YAN, HELLO PANDA, OAT KRUNCH, TIM TAM, PEPERO)",
-  "flavour": "Standardized Flavour Name (e.g., STRAWBERRY & BLACKCURRANT)",
-  "variant": "Standardized Variant (e.g., REGULAR, SNOWY, MINI, GOLD, GOKUBOSO, FESTIVE)",
+  "product_line": "Specific Sub-Brand or Line (e.g., NEXTAR, NEXTAR BROWNIES, RICHEESE, MALKIST, YAN YAN, HELLO PANDA, OAT KRUNCH, OAT 25, GOLDEN CRACKER, TIM TAM, PEPERO). IMPORTANT: For NABATI brand - RICHEESE and NEXTAR are product lines (not brand names). FESTIVE is a marketing/seasonal descriptor, NOT a product line - ignore it. Note: 'MINI OREO' and 'OREO MINI' are BOTH 'product_line: OREO' with 'variant: MINI'.",
+  "flavour": "Standardized Flavour Name. Note: ORIGINAL, VANILLA, and NORMAL are considered equivalent for most biscuits (especially OREO).",
+  "variant": "Standardized Variant (e.g., REGULAR, SNOWY, MINI, GOLD, GOKUBOSO). NOTE: Do NOT use FESTIVE as variant. FESTIVE is seasonal packaging only - always output REGULAR for Nabati FESTIVE items.",
   "product_form": "Standardized Form (e.g., STICK, WAFER, BISCUIT, COOKIE, ROLL)",
   "is_sugar_free": boolean,
   "size": "Standardized Size (e.g., 320ML, 500G)",
@@ -774,21 +862,9 @@ Return JSON only:
                     data["flavour"] = bf
                     break
 
-    # 2. Variant Protection (Missed sub-variants)
-    if current_var in ["REGULAR", ""]:
-        variants = ["GOKUBOSO", "CHUNKY", "ORGANIC", "EXTRA THIN", "SNOWY", "MINI"]
-        for v in variants:
-            if v in clean_raw:
-                data["variant"] = v
-                break
-
-    # 3. Brand Overrides
-    if "ALL TIME" in clean_raw and not data.get("brand"):
-        data["brand"] = "ALL TIME"
-
     # Apply final guards before returning/caching
     data = apply_llm_rule_guards(item, data)
-
+    
     # Save to persistent cache and in-memory cache
     save_to_llm_cache(item, data)
     llm_cache[item] = data
@@ -800,14 +876,73 @@ def apply_llm_rule_guards(item, data):
     """
     clean_raw = normalize_synonyms(item).upper()
     
+    # 0. Julie's & Oreo Specific Product Line Guards (Apply before anything else)
+    if "GOLDEN CRACKER" in clean_raw:
+        data["product_line"] = "GOLDEN CRACKER"
+        data["variant"] = "REGULAR"
+        data["flavour"] = "NORMAL"
+        
+    if "OAT 25" in clean_raw or "OAT25" in clean_raw:
+        data["product_line"] = "OAT 25"
+
+    if "OREO" in clean_raw:
+        data["brand"] = "OREO" # Ensure Oreo is the brand
+        data["confidence"] = 1.0 # Force high confidence for Oreo items to ensure merging
+        
+        # Force Form for consistency
+        if "WAFER ROLL" in clean_raw:
+            data["product_line"] = "WAFER ROLL"
+            data["product_form"] = "ROLL"
+        else:
+            data["product_form"] = "COOKIE" # Standard for regular Oreos
+        
+        # Merge Original and Vanilla as requested (they are considered same flavor contextually)
+        if str(data.get("flavour", "")).upper() in ["ORIGINAL", "VANILLA", "NORMAL", "UNKNOWN", "VAN", "ORG"]:
+            data["flavour"] = "ORIGINAL/VANILLA"
+        
+        # Merge Limited Edition into Regular
+        if any(x in clean_raw for x in ["LIM EDT", "LIMITED EDITION", "LTD EDT"]):
+            data["variant"] = "REGULAR"
+            
+        # Ensure Double Stuf consistency
+        if "DOUBLE STUF" in clean_raw or "DOUBLESTUF" in clean_raw:
+            data["product_line"] = "DOUBLE STUF"
+            
+        if "MINI" in clean_raw:
+            data["variant"] = "MINI"
+            data["product_line"] = "OREO" # Standard Oreo line for minis
+            
+        if "RED VELVET" in clean_raw:
+            data["product_line"] = "OREO" # Standard Oreo line
+            data["flavour"] = "RED VELVET"
+
+    if "GOLDEN CRACKER" in clean_raw:
+        data["product_line"] = "GOLDEN CRACKER"
+        data["variant"] = "REGULAR"
+        data["flavour"] = "NORMAL"
+        data["confidence"] = 1.0
+        
+    if "OAT 25" in clean_raw or "OAT25" in clean_raw:
+        data["product_line"] = "OAT 25"
+        data["confidence"] = 1.0
+
+    clean_raw = normalize_synonyms(item).upper()
+    
     # 1. Brand Normalization
     final_brand = str(data.get("brand", "")).upper().strip()
     brand_map = {
-        "JULIE": "JULIES", "JULYS": "JULIES", "JULI": "JULIES",
-        "HUPSENG": "HUP SENG", "HS": "HUP SENG"
+        "JULIE": "JULIES", "JULYS": "JULIES", "JULI": "JULIES", "JULIE S": "JULIES",
+        "HUPSENG": "HUP SENG", "HS": "HUP SENG",
+        # ✅ NABATI sub-brand normalization: RICHEESE and NEXTAR are Nabati product lines
+        "RICHEESE": "NABATI", "NEXTAR": "NABATI",
     }
     if final_brand in brand_map:
         data["brand"] = brand_map[final_brand]
+
+    # ✅ NABATI Guard: If item contains NABATI/RICHEESE/NEXTAR and brand is empty/wrong, force NABATI
+    if any(kw in clean_raw for kw in ["NABATI", "RICHEESE", "NEXTAR"]):
+        if not final_brand or final_brand in ["UNKNOWN", "NORMAL", "", "RICHEESE", "NEXTAR"]:
+            data["brand"] = "NABATI"
     
     if clean_raw.startswith("JULIE") and (not final_brand or final_brand in ["UNKNOWN", "NORMAL", ""]):
         data["brand"] = "JULIES"
@@ -822,8 +957,15 @@ def apply_llm_rule_guards(item, data):
         if not final_brand or final_brand in ["UNKNOWN", "NORMAL", "LEE", ""]:
             data["brand"] = "LEE BRANDS"
 
-    # 2. Size Normalization (Standardize units for large packs)
+    # 2. Size Normalization (Standardize units and remove trailing junk)
     current_size = str(data.get("size", "")).upper().replace(" ", "")
+    # Normalize GM -> G
+    current_size = current_size.replace("GM", "G")
+    # Remove trailing 'P' often from POUCH if it follows a number (e.g., 20.4GP -> 20.4G)
+    current_size = re.sub(r'(\d)GP$', r'\1G', current_size)
+    
+    data["size"] = current_size
+
     # KG to G conversion for consistency (e.g., 4.5KG -> 4500G)
     if "KG" in current_size:
         try:
@@ -844,6 +986,40 @@ def apply_llm_rule_guards(item, data):
                 data[field] = re.sub(rf'\b{plur}\b', sing, data[field], flags=re.IGNORECASE).strip()
 
     # 4. Flavour/Variant Fallbacks
+    
+    # ✅ BOURBON Specific Guards
+    if "BOURBON" in clean_raw:
+        data["brand"] = "NABATI" # User confirmed Bourbon items are under Nabati cluster
+        # Fix Gokoku No Biscuit typo and recognize line
+        if "GOKOKU" in clean_raw:
+            data["product_line"] = "GOKOKU NO BISCUIT"
+            data["product_form"] = "BISCUIT"
+            data["variant"] = "REGULAR"
+            data["flavour"] = "NORMAL"
+            data["confidence"] = 1.0
+        
+        if "CEBEURE" in clean_raw:
+            data["product_line"] = "CEBEURE"
+            data["product_form"] = "BISCUIT"
+            data["variant"] = "REGULAR"
+            data["flavour"] = "NORMAL"
+            data["confidence"] = 1.0
+
+    # ✅ LEXUS Specific Guards
+    if "LEXUS" in clean_raw or "LEXUS" in item.upper():
+        data["brand"] = "LEXUS"
+        data["product_line"] = "LEXUS" # Ensure product_line is NOT NONE to avoid LOW_CONF divergence
+        data["confidence"] = 1.0
+
+        if "CHOCO COATED" in clean_raw or "CHOCO COATED" in item.upper():
+            data["flavour"] = "CHOCOLATE COATED"
+            data["product_form"] = "BISCUIT"
+            
+        # Fix hallucinated 'OAT' for regular Lexus biscuits
+        # Use word boundary to avoid matching 'COATED'
+        if data.get("flavour") == "OAT" and not re.search(r'\bOAT\b', clean_raw):
+            data["flavour"] = "NORMAL"
+
     return data
 
 
@@ -959,9 +1135,17 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
         cache_coll = get_collection("LLM_CACHE_STORAGE")
         # Pre-load only for representative context items
         context_reps = [item_to_context.get(it, it) for it in representative_items]
-        existing_cache = {doc["item"]: doc["result"] for doc in cache_coll.find({"item": {"$in": context_reps}})}
+        existing_cache_docs = list(cache_coll.find({"item": {"$in": context_reps}}))
+        existing_cache = {}
+        for doc in existing_cache_docs:
+            item_name = doc["item"]
+            res = doc["result"]
+            # RE-APPLY GUARDS to cached data to ensure new force rules take effect
+            res = apply_llm_rule_guards(item_name, res)
+            existing_cache[item_name] = res
+            
         llm_cache.update(existing_cache)
-        print(f"Pre-loaded {len(existing_cache)} items from persistent cache.")
+        print(f"Pre-loaded {len(existing_cache)} items from persistent cache with latest rule guards applied.")
     except Exception as e:
         print(f"Error pre-loading cache: {e}")
 
@@ -1000,7 +1184,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                     rep_results[original_item] = {}
             
             if batch_num < total_batches - 1:
-                print(f"✅ Batch {batch_num + 1} completed. {len(rep_results)} items in results map.")
+                print(f"Batch {batch_num + 1} completed. {len(rep_results)} items in results map.")
                 await asyncio.sleep(0.5)
 
     # Propagate results back to all original unique items in groups
@@ -1032,7 +1216,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             return "UNKNOWN"
             
         market_val = get_val(d, ["MARKETS", "MARKET"])
-        mpack_val = get_val(d, ["MPACK", "PACK"])
+        mpack_val = normalize_mpack(get_val(d, ["MPACK", "PACK"]))
         facts_val = get_val(d, ["FACTS", "FACT"])
         
         # 2. CONSTRUCT PRE-GROUP KEY
@@ -1060,26 +1244,28 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             if not llm_line or llm_line in ["NONE", "UNKNOWN"]:
                 # print(f"⚠️  FAMILY MISSING → LOW_CONF :: {item}")
                 clean_sig = simple_clean_item(item)
+                # KEY CHANGE: Removed facts_val from key
                 pre_group_key = (
                     f"LOW_CONF|{llm_brand}|{clean_sig}|"
-                    f"{market_val}|{mpack_val}|{facts_val}|{norm.get('size', 'UNKNOWN')}"
+                    f"{market_val}|{mpack_val}|{norm.get('size', 'UNKNOWN')}"
                 )
             else:
                 # ✅ ADDED LLM_VARIANT and MPACK to HI_CONF key
+                # KEY CHANGE: Removed facts_val from key to consolidate Value and Units metrics
                 pre_group_key = (
                     f"HI_CONF|{llm_brand}|{llm_line}|{llm_form}|{llm_flavour}|{llm_variant}|{is_sf}|"
-                    f"{market_val}|{mpack_val}|{facts_val}|{norm.get('size', 'UNKNOWN')}{assorted_guard}"
+                    f"{market_val}|{mpack_val}|{norm.get('size', 'UNKNOWN')}{assorted_guard}"
                 )
         else:
             # FIX 2: Safer LOW_CONF Fallback (Do not blindly merge)
             # We use the cleaned item name as a unique signature to keep questionable items separate
             clean_sig = simple_clean_item(item)
+            # KEY CHANGE: Removed facts_val from key
             pre_group_key = (
                 f"LOW_CONF|{llm_brand}|{clean_sig}|"
-                f"{market_val}|{mpack_val}|{facts_val}|{norm.get('size', 'UNKNOWN')}"
+                f"{market_val}|{mpack_val}|{norm.get('size', 'UNKNOWN')}"
             )
-
-            
+        
         pre_groups.setdefault(pre_group_key, []).append(d)
 
     # ✅ UNIVERSAL FUZZY MERGE STAGE: Merge similar LOW_CONF single items within same (Market+Pack+Facts) context
@@ -1201,17 +1387,18 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 FLAVOUR_CONFLICTS_PRIORITY = [
                     # Tier 1: Highly specific compound flavours (check first)
                     "SALTED CARAMEL", "DARK CHOCOLATE", "DARK CHOCO", "NUTTY CHOCO",
-                    "CHIA SEED", "CHOCOLATE CHIP", "CHOC CHIP",
+                    "CHIA SEED", "CHOCOLATE CHIP", "CHOC CHIP", "RED VELVET",
                     # Tier 2: Specific single-ingredient flavours (check before generic CHOCOLATE)
                     "MACADAMIA", "PISTACHIO", "HAZELNUT", "CRANBERRY", "ALMOND",
                     "BLUEBERRY", "STRAWBERRY", "PINEAPPLE", "APPLE", "LEMON",
                     "COCONUT", "PEANUT", "GOJI", "RAISIN", "MATCHA",
                     # Tier 3: Generic flavours (check last)
-                    "VANILLA", "SALTED", "CHOCOLATE", "CHEESE", "BUTTER",
+                    "VANILLA", "SALTED", "CHOCOLATE", "CHEESE", "BUTTER", "ORIGINAL"
                 ]
                 
                 VARIANT_CONFLICTS = [
-                    "GOKUBOSO", "MINI", "GIANT", "PREMIUM", "GOLD", "FESTIVE", "SNOWY"
+                    "GOKUBOSO", "MINI", "GIANT", "PREMIUM", "GOLD", "SNOWY"
+                    # ✅ REMOVED: "FESTIVE" — Nabati Festive editions are same product (seasonal packaging only)
                 ]
                 
                 # Helper to find which conflict keyword exists in item name
@@ -1231,6 +1418,10 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                     item_name = d.get("ITEM", "")
                     fk = get_conflict_key(item_name, FLAVOUR_CONFLICTS_PRIORITY) or "OTHER_FLAV"
                     vk = get_conflict_key(item_name, VARIANT_CONFLICTS) or "OTHER_VAR"
+                    
+                    # 🚨 OREO SPECIAL: Treat Original and Vanilla as SAME in Audit to prevent split
+                    if "OREO" in item_name.upper() and fk in ["ORIGINAL", "VANILLA"]:
+                        fk = "ORIGINAL/VANILLA"
                     
                     # Create a composite key for flavour + variant grouping
                     comp_key = f"{fk}|{vk}"
@@ -1316,21 +1507,33 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             base.pop("_id", None)
             base.pop("_norm", None)
             
-            # Sum monthly columns
+            # Sum monthly columns (Prioritizing Sales Value if multiple facts present)
             month_cols = [k for k in base if "w/e" in k.lower() or "mat" in k.lower()]
+            
+            # Identify if we have Value docs (the preferred metric for summation)
+            has_value_docs = any("VALUE" in str(d.get("Facts", d.get("FACTS", ""))).upper() for d in group_docs)
+            
             for m in month_cols:
                 base[m] = 0.0
             
             for d in group_docs:
+                fact_str = str(d.get("Facts", d.get("FACTS", ""))).upper()
+                # If we have value docs, only sum value docs to avoid Dollars + Units
+                if has_value_docs and "VALUE" not in fact_str:
+                    continue
+                    
                 for m in month_cols:
                     val = d.get(m)
-                    # Robust conversion to float
                     try:
                         f_val = float(val)
                         if not math.isnan(f_val):
                             base[m] += f_val
-                    except (ValueError, TypeError):
+                    except:
                         pass
+
+            # Update Facts field to reflect merging
+            if len(set(str(d.get("Facts", d.get("FACTS", ""))) for d in group_docs)) > 1:
+                base["Facts"] = "Consolidated (Value Pref)"
 
             
             # Get norm from first item

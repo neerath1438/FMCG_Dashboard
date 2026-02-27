@@ -18,6 +18,8 @@ import pandas as pd
 from fastapi.responses import StreamingResponse
 from datetime import datetime
 from typing import Optional
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI(title="FMCG Product Mastering Platform")
 
@@ -872,7 +874,273 @@ async def export_mapping_report():
         media_type="text/csv"
     )
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  7-ELEVEN IMPORT — with LLM Cache on ArticleDescription
+# ─────────────────────────────────────────────────────────────────────────────
+
+SEVEN_ELEVEN_COL      = "7-eleven_data"
+SEVEN_ELEVEN_CACHE_COL = "7-eleven_llm_cache"
+
+# 7-Eleven prompt: extract exactly the 6 fields needed
+_711_SYSTEM_PROMPT = """
+You are a strict FMCG Data Scientist. Your task is to extract attributes from Malaysian 7-Eleven descriptions with 100% consistency.
+
+Rules for Logic Stability:
+1. ArticleDescription_clean: MUST remove all weights (e.g., 130g) and pack sizes (e.g., 10s, X10). Clean readable product name in Sentence-case.
+2. 7E_Nrmsize: MUST be only the number + Unit (G/ML). For packs like 10Gx10, extract "10G".
+3. 7E_MPack: If "X<n>", "<n>s", or "<n>x" exists, extract as "X<n>". Default "X1".
+4. 7E_Variant: Extract sub-brands or product series (e.g., DAIRY MILK, MARIE, DUCHESS, CHUNKY, 4D). If it's a distinct sub-line, it is a Variant.
+5. 7E_product_form: Extract the physical form (e.g., BISCUITS, CHIPS, GUMMY, CAKE, WAFER, STICK, CRACKER). If not clear or not applicable, "NONE".
+6. 7E_flavour: Identify the primary taste or flavour profile (e.g., CHOCOLATE, ALMOND, MIXED NUT, FRUIT&NUT, BLACKFOREST, LEMON, STRAWBERRY, BBQ, SALTED, SEAWEED, SPICY, HOT & SPICY, CHEESE, KIMCHI, HONEY BUTTER, SALTED EGG, TIRAMISU). 
+    - IMPORTANT: If it's a plain/standard version, ALWAYS use "ORIGINAL". Do not use "PLAIN" or "REGULAR".
+
+Constraint: 
+- Consistency is priority. 
+- Return ONLY a valid JSON object. No conversational text.
+
+Return format:
+{
+  "ArticleDescription_clean": "...",
+  "7E_Nrmsize": "...",
+  "7E_MPack": "X1",
+  "7E_Variant": "NONE",
+  "7E_product_form": "NONE",
+  "7E_flavour": "NONE"
+}
+
+Examples:
+- "Hwa Tai Lemon Treat 100g" -> {"ArticleDescription_clean": "Hwa Tai Lemon Treat", "7E_Nrmsize": "100G", "7E_MPack": "X1", "7E_Variant": "NONE", "7E_product_form": "NONE", "7E_flavour": "LEMON"}
+- "Hwa Tai Luxury Cracker Vegetable 148g" -> {"ArticleDescription_clean": "Hwa Tai Luxury Cracker", "7E_Nrmsize": "148G", "7E_MPack": "X1", "7E_Variant": "NONE", "7E_product_form": "CRACKER", "7E_flavour": "VEGETABLE"}
+- "ecoBrowns x KL Brice Seaweed 40g" -> {"ArticleDescription_clean": "ecoBrowns x KL Brice Seaweed", "7E_Nrmsize": "40G", "7E_MPack": "X1", "7E_Variant": "KL BRICE", "7E_product_form": "NONE", "7E_flavour": "SEAWEED"}
+- "Kokiri Wow Seaweed Original 12g" -> {"ArticleDescription_clean": "Kokiri Wow Seaweed", "7E_Nrmsize": "12G", "7E_MPack": "X1", "7E_Variant": "NONE", "7E_product_form": "NONE", "7E_flavour": "SEAWEED/ORIGINAL"}
+- "7-Eleven Potato Sticks Salted 50g" -> {"ArticleDescription_clean": "7-Eleven Potato Sticks Salted", "7E_Nrmsize": "50G", "7E_MPack": "X1", "7E_Variant": "NONE", "7E_product_form": "STICK", "7E_flavour": "SALTED"}
+"""
+
+def _call_711_llm(article_description: str) -> dict:
+    """Call OpenAI with only the ArticleDescription; return 4 extra fields."""
+    from backend.llm_client import flow2_client
+    import json
+
+    _fallback = {
+        "ArticleDescription_clean": article_description,
+        "7E_Nrmsize":     None,
+        "7E_MPack":       "X1",
+        "7E_Variant":     "NONE",
+        "7E_product_form":"NONE",
+        "7E_flavour":     "NONE",
+    }
+    user_msg = f'ARTICLE DESCRIPTION: "{article_description}"\n\nReturn JSON only.'
+    try:
+        raw = flow2_client.chat_completion(
+            system_prompt=_711_SYSTEM_PROMPT,
+            user_message=user_msg,
+            temperature=0,
+        ).strip()
+    except Exception as e:
+        print(f"  LLM call failed for '{article_description}': {e}")
+        return _fallback
+
+    start, end = raw.find("{"), raw.rfind("}")
+    if start != -1 and end != -1:
+        raw = raw[start:end + 1]
+    try:
+        data = json.loads(raw)
+        for k, v in _fallback.items():
+            data.setdefault(k, v)
+        return data
+    except Exception:
+        return _fallback
+
+
+def _get_711_cache(article_description: str) -> dict | None:
+    """Return cached LLM result for this ArticleDescription, or None."""
+    coll = get_collection(SEVEN_ELEVEN_CACHE_COL)
+    doc = coll.find_one({"article_description": article_description}, {"_id": 0, "result": 1})
+    return doc["result"] if doc else None
+
+
+def _save_711_cache(article_description: str, result: dict):
+    """Upsert LLM result into 7-eleven_llm_cache."""
+    coll = get_collection(SEVEN_ELEVEN_CACHE_COL)
+    coll.update_one(
+        {"article_description": article_description},
+        {"$set": {
+            "article_description": article_description,
+            "result": result,
+            "cached_at": datetime.utcnow().isoformat(),
+        }},
+        upsert=True,
+    )
+
+
+@app.post("/upload/7eleven")
+async def upload_seven_eleven(file: UploadFile = File(...), request: Request = None):
+    """
+    Import a 7-Eleven Excel file into the 7-eleven_data collection.
+
+    For each row:
+      1. Check 7-eleven_llm_cache by ArticleDescription.
+      2. If cache HIT  → use cached LLM result (no OpenAI call).
+      3. If cache MISS → send ONLY ArticleDescription to OpenAI,
+                         store result in cache, then save full row + enrichment.
+    """
+    print(f"\n📥 7-Eleven upload: {file.filename}")
+    contents = await file.read()
+
+    try:
+        xl = pd.ExcelFile(io.BytesIO(contents))
+        df = xl.parse(xl.sheet_names[0])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Cannot read Excel: {e}")
+
+    # Normalise column names (strip whitespace)
+    df.columns = [str(c).strip() for c in df.columns]
+
+    if "ArticleDescription" not in df.columns:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Column 'ArticleDescription' not found. Columns present: {list(df.columns)}"
+        )
+
+    total        = len(df)
+    cache_hits   = 0
+    cache_misses = 0
+    saved        = 0
+    errors       = 0
+
+    data_coll  = get_collection(SEVEN_ELEVEN_COL)
+    
+    # ✅ EXCLUSIVE IMPORT: Clear ALL old data from 7-eleven_data
+    # This ensures mapping reports only contain items from the latest upload.
+    # LLM Cache is NOT cleared, so it stays cost-efficient.
+    print(f"🧹 Clearing existing data in {SEVEN_ELEVEN_COL}...")
+    data_coll.delete_many({})
+
+    has_code_col = "ArticleCode" in df.columns or "Article_Code" in df.columns
+    code_col = "ArticleCode" if "ArticleCode" in df.columns else (
+               "Article_Code" if "Article_Code" in df.columns else None)
+
+    docs_to_upsert = []
+    loop = asyncio.get_event_loop()
+    # Use a shared executor or create one for this request
+    executor = ThreadPoolExecutor(max_workers=10)
+
+    for i, row in df.iterrows():
+        # 🔗 CHECK DISCONNECTION: Stop if client cancelled
+        # Yield to event loop to allow heartbeats/checks to run
+        await asyncio.sleep(0)
+        if request:
+            if await request.is_disconnected():
+                print(f"❌ Aborting 7-Eleven Import: Client disconnected at row {i}")
+                executor.shutdown(wait=False)
+                return {"status": "Stopped | Client disconnected", "rows_saved": saved}
+
+        article_desc = str(row.get("ArticleDescription", "")).strip()
+        if not article_desc or article_desc.lower() in ("nan", "none", ""):
+            continue
+
+        # ── 1. Cache check ──────────────────────────────────────────────
+        cached = _get_711_cache(article_desc)
+        if cached:
+            llm_result = cached
+            cache_hits += 1
+        else:
+            # ── 2. Call OpenAI (ArticleDescription only) ─────────────
+            try:
+                # Wrap sync LLM call in executor to avoid blocking the event loop
+                llm_result = await loop.run_in_executor(executor, _call_711_llm, article_desc)
+                _save_711_cache(article_desc, llm_result)
+                cache_misses += 1
+            except Exception as e:
+                print(f"  ⚠️  LLM error for '{article_desc}': {e}")
+                llm_result = {
+                    "ArticleDescription_clean": article_desc,
+                    "7E_Nrmsize":      None,
+                    "7E_MPack":        "X1",
+                    "7E_Variant":      "NONE",
+                    "7E_product_form": "NONE",
+                    "7E_flavour":      "NONE",
+                }
+                errors += 1
+
+        # ── 3. Build document: original Excel cols + 4 LLM extra fields ───
+        raw_row = {}
+        for k, v in row.items():
+            try:
+                raw_row[k] = None if pd.isna(v) else v
+            except (TypeError, ValueError):
+                raw_row[k] = v
+        doc = {
+            **raw_row,
+            # ── 6 LLM-enriched fields ───────────────────────────────────
+            "ArticleDescription_clean": llm_result.get("ArticleDescription_clean", article_desc),
+            "7E_Nrmsize":               llm_result.get("7E_Nrmsize"),
+            "7E_MPack":                 llm_result.get("7E_MPack", "X1"),
+            "7E_Variant":               llm_result.get("7E_Variant", "NONE"),
+            "7E_product_form":          llm_result.get("7E_product_form", "NONE"),
+            "7E_flavour":               llm_result.get("7E_flavour", "NONE"),
+            # ── housekeeping ────────────────────────────────────────────
+            "imported_at":              datetime.utcnow().isoformat(),
+            "source_file":              file.filename,
+        }
+        docs_to_upsert.append(doc)
+        saved += 1
+
+    # ── 4. Bulk upsert / insert ──────────────────────────────────────────
+    executor.shutdown(wait=False)
+    if docs_to_upsert:
+        if code_col:
+            from pymongo import UpdateOne as PymUpdateOne
+            ops = [
+                PymUpdateOne(
+                    {code_col: d.get(code_col)},
+                    {"$set": d},
+                    upsert=True,
+                )
+                for d in docs_to_upsert
+            ]
+            data_coll.bulk_write(ops, ordered=False)
+        else:
+            # Full collection was already cleared at start, so just insert
+            data_coll.insert_many(docs_to_upsert)
+
+    print(f"✅ 7-Eleven import done: {saved}/{total} rows | "
+          f"cache hits={cache_hits} | new LLM calls={cache_misses} | errors={errors}")
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "total_rows": total,
+        "saved": saved,
+        "cache_hits": cache_hits,
+        "llm_calls_made": cache_misses,
+        "errors": errors,
+        "collection": SEVEN_ELEVEN_COL,
+        "cache_collection": SEVEN_ELEVEN_CACHE_COL,
+    }
+
+
+@app.get("/cache/7eleven/stats")
+async def get_711_cache_stats():
+    """Return stats about the 7-Eleven LLM cache collection."""
+    coll = get_collection(SEVEN_ELEVEN_CACHE_COL)
+    total = coll.count_documents({})
+    sample = list(coll.find({}, {"_id": 0, "article_description": 1, "result.name": 1,
+                                  "result.brand": 1, "cached_at": 1}).limit(5))
+    return {"total_cached": total, "sample": sample}
+
+
+@app.delete("/cache/7eleven/clear")
+async def clear_711_cache():
+    """Clear the 7-Eleven LLM cache (forces re-enrichment on next import)."""
+    coll = get_collection(SEVEN_ELEVEN_CACHE_COL)
+    result = coll.delete_many({})
+    return {"status": "success", "deleted": result.deleted_count}
+
+
 from fastapi.staticfiles import StaticFiles
+
 
 
 # Mount exports directory for Chatbot Excel downloads

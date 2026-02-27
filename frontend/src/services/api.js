@@ -94,13 +94,25 @@ export const pipelineAPI = {
         });
     },
     // Flow 2 — AI Mastering (same as uploadAPI.triggerLLMMastering)
-    runLLMMastering: (sheetName) => api.post(`/process/llm-mastering/${sheetName}`),
+    runLLMMastering: (sheetName, signal) => api.post(`/process/llm-mastering/${sheetName}`, {}, { signal }),
     // Flow 3 — Mapping Analysis
-    runMapping: () => api.post('/pipeline/run-mapping'),
+    runMapping: (signal) => api.post('/pipeline/run-mapping', {}, { signal }),
     // Exports
     exportFlow1: () => api.get('/export/flow1-report', { responseType: 'blob' }),
     exportFlow2: () => api.get('/export/master-stock', { responseType: 'blob' }),
     exportFlow3: () => api.get('/export/mapping-report', { responseType: 'blob' }),
+    // Stage 4 — 7-Eleven Import with LLM Cache
+    upload7Eleven: (file, signal) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/upload/7eleven', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 18000000,
+            signal,
+        });
+    },
+    get711CacheStats: () => api.get('/cache/7eleven/stats'),
+    clear711Cache: () => api.delete('/cache/7eleven/clear'),
 };
 
 export default api;
