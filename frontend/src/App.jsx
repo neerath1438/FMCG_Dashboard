@@ -10,6 +10,8 @@ import LowConfidence from './pages/LowConfidence';
 import Analytics from './pages/Analytics';
 import Chatbot from './pages/Chatbot';
 import Pipeline from './pages/Pipeline';
+import AuditDashboard from './pages/AuditDashboard';
+import MasteringQA from './pages/MasteringQA';
 import Login from './pages/Login';
 
 import { Toaster } from 'react-hot-toast';
@@ -122,6 +124,20 @@ function AppRoutes() {
                 <ProtectedRoute>
                     <Layout>
                         <Pipeline />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            <Route path="/audit-qa" element={
+                <ProtectedRoute>
+                    <Layout>
+                        <AuditDashboard />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            <Route path="/mastering-qa" element={
+                <ProtectedRoute>
+                    <Layout>
+                        <MasteringQA />
                     </Layout>
                 </ProtectedRoute>
             } />

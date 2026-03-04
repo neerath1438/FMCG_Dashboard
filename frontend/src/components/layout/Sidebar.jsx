@@ -10,7 +10,9 @@ import {
     Box,
     X,
     Settings,
-    GitBranch
+    GitBranch,
+    Search,
+    Share2
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -19,11 +21,13 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     const navItems = [
         { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { path: '/products', icon: Package, label: 'Products' },
-        { path: '/upload', icon: Upload, label: 'Upload' },
+        // { path: '/products', icon: Package, label: 'Products' },
+        // { path: '/upload', icon: Upload, label: 'Upload' },
         { path: '/pipeline', icon: GitBranch, label: 'Pipeline' },
-        { path: '/low-confidence', icon: AlertTriangle, label: 'Low Confidence' },
-        { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+        // { path: '/low-confidence', icon: AlertTriangle, label: 'Low Confidence' },
+        // { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+        { path: '/audit-qa', icon: Search, label: 'AI Audit QA' },
+        { path: '/mastering-qa', icon: Share2, label: 'Mastering QA' },
         { path: '/chatbot', icon: MessageSquare, label: 'AI Assistant' },
     ];
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -8,6 +8,15 @@ import FloatingChatbot from '../FloatingChatbot';
 const Layout = ({ children }) => {
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const scrollRef = useRef(null);
+
+    // Reset scroll to top when path changes
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTo(0, 0);
+            scrollRef.current.scrollTop = 0;
+        }
+    }, [location.pathname]);
 
     const pageTitles = {
         '/': 'Dashboard',
@@ -16,6 +25,8 @@ const Layout = ({ children }) => {
         '/low-confidence': 'Low Confidence Items',
         '/analytics': 'Analytics',
         '/chatbot': 'AI Assistant',
+        '/audit-qa': 'AI Audit QA Pipeline',
+        '/mastering-qa': 'Mastering QA Module',
     };
 
     const getTitle = () => {
@@ -51,7 +62,10 @@ const Layout = ({ children }) => {
                     </div>
 
                     {/* Main content - Scrollable area inside box */}
-                    <main className="flex-1 overflow-y-auto custom-scrollbar">
+                    <main 
+                        ref={scrollRef}
+                        className="flex-1 overflow-y-auto custom-scrollbar"
+                    >
                         <div className="p-4 sm:p-6 lg:p-8">
                             {children}
                         </div>

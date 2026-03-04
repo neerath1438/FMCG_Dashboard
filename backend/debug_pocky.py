@@ -1,31 +1,37 @@
+
+import sys
 import os
-import re
-from pymongo import MongoClient
-from dotenv import load_dotenv
+import asyncio
+import json
 
-load_dotenv()
+# Add parent directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def connect_db():
-    client = MongoClient(os.getenv("MONGO_URI", "mongodb://localhost:27017"))
-    db = client['fmcg_mastering']
-    return db['7-eleven_data'], db['master_stock_data']
+from backend.processor import normalize_item_llm, calculate_similarity, simple_clean_item
 
-def analyze_pocky():
-    coll_7e, coll_master = connect_db()
+async def debug_pocky():
+    item1 = "GLICO POCKY COOKIES & CREAM STICK 40G"
+    item2 = "POCKY COOKIE&CREAM 40 GM"
     
-    print("\n--- 7-Eleven Pocky Examples ---")
-    items_7e = list(coll_7e.find({"ArticleDescription": {"$regex": "Pocky", "$options": "i"}}).limit(10))
-    for d in items_7e:
-        print(f"Desc: {d['ArticleDescription']}")
-        print(f"  7E_Brand: {d.get('7E_Brand')}, 7E_Variant: {d.get('7E_Variant')}, 7E_flavour: {d.get('7E_flavour')}, Size: {d.get('7E_Size')}")
-        print("-" * 30)
-
-    print("\n--- Nielsen Pocky Examples ---")
-    items_n = list(coll_master.find({"ITEM": {"$regex": "Pocky", "$options": "i"}}).limit(10))
-    for m in items_n:
-        print(f"Item: {m['ITEM']}")
-        print(f"  BRAND: {m.get('BRAND')}, VARIANT: {m.get('VARIANT')}, flavour: {m.get('flavour')}, Size: {m.get('NRMSIZE')}")
-        print("-" * 30)
+    print(f"Testing Item 1: {item1}")
+    res1 = normalize_item_llm(item1)
+    print(json.dumps(res1, indent=2))
+    
+    print("\n" + "="*50 + "\n")
+    
+    print(f"Testing Item 2: {item2}")
+    res2 = normalize_item_llm(item2)
+    print(json.dumps(res2, indent=2))
+    
+    print("\n" + "="*50 + "\n")
+    
+    sig1 = simple_clean_item(item1)
+    sig2 = simple_clean_item(item2)
+    sim = calculate_similarity(sig1, sig2)
+    
+    print(f"Signature 1: {sig1}")
+    print(f"Signature 2: {sig2}")
+    print(f"Similarity: {sim}")
 
 if __name__ == "__main__":
-    analyze_pocky()
+    asyncio.run(debug_pocky())

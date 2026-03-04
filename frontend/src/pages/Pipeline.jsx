@@ -27,8 +27,12 @@ const LOG_COLORS = {
     stage: 'text-pink-400 font-semibold',
 };
 const LogPanel = ({ logs }) => {
-    const bottomRef = useRef(null);
-    useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
+    const scrollContainerRef = useRef(null);
+    useEffect(() => { 
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+    }, [logs]);
     return (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-3 bg-gray-900/90 border-b border-gray-700">
@@ -40,7 +44,10 @@ const LogPanel = ({ logs }) => {
                     <span className="w-3 h-3 rounded-full bg-green-500/70" />
                 </div>
             </div>
-            <div className="bg-gray-950/95 h-56 overflow-y-auto px-4 py-3 font-mono text-xs space-y-1 custom-scrollbar">
+            <div 
+                ref={scrollContainerRef}
+                className="bg-gray-950/95 h-56 overflow-y-auto px-4 py-3 font-mono text-xs space-y-1 custom-scrollbar"
+            >
                 {logs.length === 0
                     ? <span className="text-gray-600">Waiting for pipeline to start...</span>
                     : logs.map((e, i) => (
@@ -53,7 +60,6 @@ const LogPanel = ({ logs }) => {
                         </div>
                     ))
                 }
-                <div ref={bottomRef} />
             </div>
         </div>
     );

@@ -115,4 +115,38 @@ export const pipelineAPI = {
     clear711Cache: () => api.delete('/cache/7eleven/clear'),
 };
 
+export const qaAPI = {
+    runAudit: () => api.post('/api/qa/run-audit'),
+    getReports: () => api.get('/api/qa/reports'),
+    uploadAudit: (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/api/qa/upload-audit', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 18000000,
+        });
+    },
+    uploadMasteringAudit: (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/api/qa/mastering-audit', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 18000000,
+        });
+    },
+    stopAudit: (brand) => api.post('/api/qa/stop-audit', {}, {
+        headers: { 'brand': brand }
+    }),
+    getMasteringDiagnostic: (itemNames) => api.post('/api/qa/mastering-diagnostic', {
+        item_names: itemNames
+    }),
+    translateText: (text) => api.post('/api/qa/translate-text', { text }),
+    getAuditDiagnostic: (gapDesc, gapSize, heroCandidates) => api.post('/api/qa/audit-diagnostic', {
+        gap_desc: gapDesc,
+        gap_size: gapSize,
+        hero_candidates: heroCandidates
+    }),
+    translateAudit: (text) => api.post('/api/qa/translate-audit', { text })
+};
+
 export default api;

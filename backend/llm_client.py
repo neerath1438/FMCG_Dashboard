@@ -208,7 +208,9 @@ class OpenAIOnlyClient:
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_message}
                     ],
-                    temperature=temperature,
+                    temperature=0,
+                    seed=42, # Fixed seed for determinism
+                    top_p=0.0000000001, # Extremely low top_p to stick to the best choice
                     max_tokens=max_tokens
                 )
                 return resp.choices[0].message.content

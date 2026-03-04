@@ -1,20 +1,18 @@
 [
   {
-    "merged_product": "JULIE'S SANDWICH CHEESE CONVI PACK (12X28G) 336G",
+    "winner_product": "JULIE'S SANDWICH CHEESE CONVI PACK (12X28G) 336G",
     "upc": "9556121020607",
     "size": "28GM",
-    "merged_from": [
-      "JULIE'S SANDWICH CHEESE CONVI PACK (12X28G) 336G",
+    "duplicates_removed": [
       "JULIES CHEESE SANDWICH CONVI PACK 336GM (12X28GM)"
     ],
     "count": 2
   },
   {
-    "merged_product": "JULIE'S BUTTER CRACKERS 360G",
+    "winner_product": "JULIE'S BUTTER CRACKERS 360G",
     "upc": "9556121026647",
     "size": "360GM",
-    "merged_from": [
-      "JULIE'S BUTTER CRACKERS 360G",
+    "duplicates_removed": [
       "JULIE'S BUTTER CRACKERS 360GM"
     ],
     "count": 2

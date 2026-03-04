@@ -66,12 +66,13 @@ def normalize_synonyms(item_name: str) -> str:
     
     # Define synonym maps
     syns = {
-        "CHOCOLATE": ["COCOA", "CHOC", "CHOCO", "COK", "CHCO"],
+        "CHOCOLATE": ["COCOA", "CHOC", "CHOCO", "COK", "CHCO", "CHCLTE", "CHOCKLATE", "CHOKLATE"],
+        "WHITE CHOCOLATE": ["WCHCLTE", "WHITE CHOKLATE", "WCHOC", "WCHOCO"],
         "STRAWBERRY": ["S/BERRY", "SBERRY", "STRWB", "STRW", "S/BERY"],
         "VANILLA": ["VAN", "VNL", "VNLA"],
         "PEANUT": ["PNUT", "PNT", "P-NUT"],
         "NEAPOLITAN": ["NPLTNE", "NAPOLITANER"],
-        "ASSORTED": ["ASST", "ASSTD", "MIX"],
+        "ASSORTED": ["ASST", "ASSTD", "MIX", "ASSORTMENT", "ASSORTIS", "ASSTORTED"],
         "CHOCOLATE CHIP": ["C/CHIP", "CHOC CHIP", "CHIP", "CHOC CHIPS"],
         "SALTED CARAMEL": ["SALTED CRMEL", "SALT CRMEL", "SALTED CARAMEL"],
         "MACADAMIA": ["MCDAMIA", "MACDAMIA", "MACADMIA"],
@@ -81,7 +82,14 @@ def normalize_synonyms(item_name: str) -> str:
         "PISTACHIO": ["PSTCHIO", "PISTCH"],
         "GRAM": ["GM", "GMS", "G"],
         "JULIES": ["JULIE S", "JULIES", "JULIE", "JULI", "JULYS"],
+        "ARNOTTS": ["ARNOTT S", "ARNOTTS", "ARNOTT'S", "ARNOTT"],
+        "NYAM NYAM": ["NYAM-NYAM", "NYAMNYAM"],
         "SANDWICH": ["S/WICH", "SWICH", "SANDWICHES"],
+        "FAMILY PACK": ["FAMILY P", "FAMILY PK", "F/PACK", "F/PK", "FAMILY SET"],
+        "BISCUIT": ["BISC", "BISCS", "BISK"],
+        "ORIGINAL": ["ORI", "ORIG"],
+        "CRACKER": ["CRAKERS", "CRACKERS", "CRK", "CRACK"],
+        "VEGETABLE": ["VEGE", "VEG", "VEGI"],
         "LEMOND": ["LE-MOND"],
         "DOUBLE STUF": ["DOUBLESTUF", "DOUBLE STUFF", "DBLE STUF", "DBLE STUFF"],
         "CRUNCHY BITES": ["CRUNCHIES", "CRUNCHY"],
@@ -163,7 +171,12 @@ async def process_nielsen_dataframe(df, sheet_name, request=None):
     df_raw = df.replace({pd.NA: None, float('nan'): None})
     for row in df_raw.to_dict("records"):
         row["sheet_name"] = FIXED_SHEET_NAME
+        row["_row_id"] = str(uuid.uuid4())
+        row["is_duplicate"] = False
         rows_to_insert.append(row)
+    
+    # ✅ Update original DF with row IDs so processing can track them
+    df["_row_id"] = [r["_row_id"] for r in rows_to_insert]
         
     if rows_to_insert:
         raw_coll.insert_many(rows_to_insert)
@@ -180,6 +193,9 @@ async def process_nielsen_dataframe(df, sheet_name, request=None):
     if facts_col: ignore_cols.append(facts_col)
     
     descriptive_cols = [c for c in df.columns if c not in ignore_cols]
+    
+    # ✅ Identifying priority metric for sorting (MAT)
+    mat_col = next((c for c in monthly_cols if "MAT" in str(c).upper()), None)
     
     # Filter valid UPCs
     df = df[df[upc_col].notnull()].copy()
@@ -226,12 +242,29 @@ async def process_nielsen_dataframe(df, sheet_name, request=None):
     
     def process_single_group(group_data):
         group_ids, group = group_data
+        
+        # ✅ NEW: Sort by MAT (High Stock First) instead of arbitrary order
+        if mat_col:
+            # Create a numeric helper for safe sorting
+            temp_mat = pd.to_numeric(group[mat_col], errors='coerce').fillna(0)
+            group = group.iloc[temp_mat.argsort()[::-1]].copy()
+
+        # ✅ NEW: Identify IDs to be marked as duplicates in raw_data
+        discarded_ids = []
+        if len(group) > 1:
+            discarded_ids = group["_row_id"].iloc[1:].tolist()
+
         buckets = [group.to_dict('records')]
         bucket_records = []
         for bucket in buckets:
             base_row = bucket[0]
             merged_count = len(bucket)
             product_names = [r[item_col] for r in bucket] if item_col else [f"UPC_{base_row[upc_col]}"] * merged_count
+            
+            # ✅ NEW: Collect duplicate metadata (excluding the leader)
+            duplicate_items = product_names[1:] if merged_count > 1 else []
+            duplicate_ids = group["_row_id"].iloc[1:].tolist() if merged_count > 1 else []
+            duplicate_upcs = [str(u) for u in group[upc_col].iloc[1:].tolist()] if merged_count > 1 else []
             
             merged_record = {"UPC": base_row[upc_col]}
             if market_col: merged_record[market_col] = base_row[market_col]
@@ -243,50 +276,46 @@ async def process_nielsen_dataframe(df, sheet_name, request=None):
                     merged_record[col] = base_row[col]
             
             for col in monthly_cols:
-                total = 0.0
-                if col in base_row:
-                    for r in bucket:
-                        val = r.get(col, 0)
-                        try:
-                            f_val = float(val)
-                            if not math.isnan(f_val):
-                                total += f_val
-                        except: pass
-                merged_record[col] = total
+                # ✅ NEW: Skip summation. Just pick the value from the highest stock record (base_row)
+                val = base_row.get(col, 0)
+                try:
+                    f_val = float(val)
+                    if math.isnan(f_val): f_val = 0.0
+                except: f_val = 0.0
+                merged_record[col] = f_val
             
-            brand = merged_record.get("BRAND", "UNKNOWN")
-            merge_id = f"{brand}_{uuid.uuid4().hex}"
             
-            merge_rule_parts = ["UPC"]
-            if market_col: merge_rule_parts.append("Market")
-            if mpack_col: merge_rule_parts.append("MPack")
-            if facts_col: merge_rule_parts.append("Facts")
-            if size_col and merged_count > 1: merge_rule_parts.append("Size") # Removed (5g)
+            # Terminology Shift: From 'Merge' to 'Duplicate' for Flow 1
+            merged_record["duplicate_items"] = duplicate_items
+            merged_record["duplicate_ids"] = duplicate_ids
+            merged_record["duplicate_upcs"] = duplicate_upcs
+            merged_record["duplicate_documents"] = merged_count
+            merged_record["is_duplicate_count"] = merged_count - 1
             
-            merged_record["merge_id"] = merge_id
-            merged_record["merge_items"] = product_names
-            merged_record["ITEM"] = product_names[0] if product_names else f"UPC_{base_row[upc_col]}"
-            merged_record["merged_from_docs"] = merged_count
-            merged_record["merge_rule"] = " + ".join(merge_rule_parts)
-            merged_record["merged_upcs"] = [str(base_row[upc_col])]
-            merged_record["merge_level"] = "NO_MERGE" if merged_count == 1 else f"MERGED_{merged_count}_VARIANTS"
+            # Winner identity
+            merged_record["ITEM"] = base_row.get(item_col) or f"UPC_{base_row[upc_col]}"
             merged_record["sheet_name"] = "wersel_match"
+            merged_record["is_merged_status"] = False
+            
+            # REMOVED: merge_id, merge_rule, merged_upcs, merge_level (Clean for Flow 1)
+            
             bucket_records.append(merged_record)
         
         merge_logs = []
         for rec in bucket_records:
-            if rec.get("merged_from_docs", 1) > 1:
+            if rec.get("duplicate_documents", 1) > 1:
                 merge_logs.append({
-                    "merged_product": rec.get("ITEM"),
+                    "winner_product": rec.get("ITEM"),
                     "upc": rec.get("UPC"),
                     "size": rec.get(size_col) if size_col else "N/A",
-                    "merged_from": rec.get("merge_items"),
-                    "count": rec.get("merged_from_docs")
+                    "duplicates_removed": rec.get("duplicate_items"),
+                    "count": rec.get("duplicate_documents")
                 })
-        return bucket_records, merge_logs
+        return bucket_records, merge_logs, discarded_ids
 
     single_stock_records = []
     all_merge_logs = []
+    all_discarded_ids = []
     batch_size = 1000
     total_groups = len(groups_list)
     
@@ -299,10 +328,19 @@ async def process_nielsen_dataframe(df, sheet_name, request=None):
                 return {}
             batch_end = min(batch_start + batch_size, total_groups)
             batch_results = list(executor.map(process_single_group, groups_list[batch_start:batch_end]))
-            for group_records, group_logs in batch_results:
+            for group_records, group_logs, discarded in batch_results:
                 single_stock_records.extend(group_records)
                 all_merge_logs.extend(group_logs)
+                all_discarded_ids.extend(discarded)
             await asyncio.sleep(0)
+    
+    # ✅ UPDATE RAW DATA: Mark duplicates
+    if all_discarded_ids:
+        print(f"[{sheet_name}] Flagging {len(all_discarded_ids)} duplicates in raw_data...")
+        raw_coll.update_many(
+            {"_row_id": {"$in": all_discarded_ids}},
+            {"$set": {"is_duplicate": True}}
+        )
     
     if all_merge_logs:
         try:
@@ -458,8 +496,10 @@ Use these standardized terms for any raw keywords found:
   - {APP, APPL, APPLE} -> APPLE
   - {MNG, MANGO} -> MANGO
   - {PINE, PNAP, PINEAPPLE} -> PINEAPPLE
-  - {ORI, ORIG, ORIGINAL} -> ORIGINAL
-  - {BLK, BLACK} -> BLACK
+   - {ORI, ORIG, ORIGINAL} -> ORIGINAL
+   - {ASSORTED, ASST, ASSORTMENT, ASSORTIS} -> ASSORTED
+   - {CRK, CRACKERS, CRAKERS, CRACKER} -> CRACKER
+   - {BLK, BLACK} -> BLACK
   - {WHT, WHITE} -> WHITE
   - {GRN, GREEN} -> GREEN
   - {RD, RED} -> RED
@@ -998,12 +1038,79 @@ def apply_llm_rule_guards(item, data):
             data["flavour"] = "NORMAL"
             data["confidence"] = 1.0
         
+        if "PETIT" in clean_raw:
+            data["product_line"] = "PETIT"
+            data["brand"] = "BOURBON" # User confirmed Bourbon items are under Nabati cluster
+            data["confidence"] = 1.0
+
         if "CEBEURE" in clean_raw:
             data["product_line"] = "CEBEURE"
             data["product_form"] = "BISCUIT"
             data["variant"] = "REGULAR"
             data["flavour"] = "NORMAL"
             data["confidence"] = 1.0
+
+    # ✅ LEE BRANDS Specific Guards
+    if "LEE" in clean_raw:
+        data["brand"] = "LEE BRANDS"
+        data["confidence"] = 1.0
+        
+        # 1. Gift Classic / Assortment Merging
+        if any(x in clean_raw for x in ["GIFT CLASSIC", "ASSORTED", "ASSORTMENT"]):
+            if "BISCUIT" in clean_raw or "GIFT" in clean_raw:
+                data["product_line"] = "GIFT CLASSIC"
+                data["flavour"] = "ASSORTED"
+                data["product_form"] = "BISCUIT"
+
+        # 2. Original / Ori / Normal Cracker Merging
+        if any(x in clean_raw for x in ["ORIGINAL", "ORI ", " ORI", "NORMAL"]):
+            if "CRACKER" in clean_raw:
+                data["flavour"] = "ORIGINAL"
+                data["product_form"] = "CRACKER"
+                data["product_line"] = "CRACKER" # Keep line consistent for merge key
+
+    # ✅ ARNOTT'S Specific Guards
+    if any(x in clean_raw for x in ["ARNOTT", "GOOD TIME", "NYAM", "GINGER NUT"]):
+        data["brand"] = "ARNOTT'S"
+        data["confidence"] = 1.0
+        
+        # Consistent Form for Biscuits/Cookies
+        if any(x in clean_raw for x in ["BISCUIT", "COOKIE", "COOKIES"]):
+            data["product_form"] = "BISCUIT"
+
+        if "NYAM" in clean_raw:
+            # Distinguish sub-lines to prevent incorrect merging of different concepts
+            if "FANTASY STICK" in clean_raw:
+                data["product_line"] = "NYAM NYAM FANTASY STICK"
+            elif "BUBBLE PUFF" in clean_raw:
+                data["product_line"] = "NYAM NYAM BUBBLE PUFF"
+            elif "RICE CRISPY" in clean_raw:
+                data["product_line"] = "NYAM NYAM RICE CRISPY"
+            else:
+                # Fallback to LLM extraction or generic line if sub-brand not identified
+                if not data.get("product_line") or data["product_line"] in ["UNKNOWN", "NYAM NYAM"]:
+                    data["product_line"] = "NYAM NYAM"
+            
+            data["product_form"] = "SNACK"
+            
+        if "GOOD TIME" in clean_raw:
+            data["product_line"] = "GOOD TIME"
+            data["product_form"] = "BISCUIT"
+            
+            # Sub-variation guards for Double Choc vs Choc Chip
+            if "DOUBLE" in clean_raw:
+                data["flavour"] = "DOUBLE CHOCOLATE"
+                data["variant"] = "REGULAR"
+                # Size normalization for Double Choc
+                if "26.5" in clean_raw:
+                    data["size"] = "26.5G"
+            elif "CHOC" in clean_raw:
+                data["flavour"] = "CHOCOLATE"
+
+        if "GINGER NUT" in clean_raw:
+            data["product_line"] = "GINGER NUT"
+            data["flavour"] = "GINGER"
+            data["product_form"] = "BISCUIT"
 
     # ✅ LEXUS Specific Guards
     if "LEXUS" in clean_raw or "LEXUS" in item.upper():
@@ -1015,10 +1122,46 @@ def apply_llm_rule_guards(item, data):
             data["flavour"] = "CHOCOLATE COATED"
             data["product_form"] = "BISCUIT"
             
+        # Specific Guard for Chocolate Chip Cookies sub-line
+        if "CHOCOLATE CHIP COOKIE" in clean_raw or "CHOC CHIP COOKIE" in clean_raw:
+            data["product_line"] = "CHOCOLATE CHIP COOKIE"
+            data["brand"] = "LEXUS"
+            data["confidence"] = 1.0
+            
         # Fix hallucinated 'OAT' for regular Lexus biscuits
         # Use word boundary to avoid matching 'COATED'
         if data.get("flavour") == "OAT" and not re.search(r'\bOAT\b', clean_raw):
             data["flavour"] = "NORMAL"
+
+    # ✅ HWA TAI Specific Guards
+    if any(x in clean_raw for x in ["HWA TAI", "HWATAI"]):
+        data["brand"] = "HWA TAI"
+        data["confidence"] = 1.0
+        
+        if "GOLDEN" in clean_raw:
+            data["product_line"] = "GOLDEN"
+            if "ASSORTED" in clean_raw:
+                data["flavour"] = "ASSORTED"
+                
+        if "LUXURY" in clean_raw:
+            data["product_line"] = "LUXURY"
+            if "VEGETABLE" in clean_raw:
+                data["flavour"] = "VEGETABLE"
+                data["product_form"] = "CRACKER"
+
+    # ✅ GLICO / POCKY Specific Guards
+    if any(x in clean_raw for x in ["GLICO", "POCKY"]):
+        data["brand"] = "GLICO POCKY"
+        data["confidence"] = 1.0
+        
+        # Ensure 'product_line' defaults to 'POCKY' for Glico sticks if it's missing or unknown
+        # This fixes cases like 'GLICO CHOCO BANANA' which should merge with 'GLICO POCKY CHOCO BANANA'
+        if not data.get("product_line") or str(data.get("product_line")).upper() in ["UNKNOWN", "NONE", ""]:
+            data["product_line"] = "POCKY"
+        
+        if "FAMILY PACK" in clean_raw:
+            data["product_line"] = "POCKY FAMILY PACK"
+            data["variant"] = "REGULAR"
 
     return data
 
@@ -1026,20 +1169,19 @@ def apply_llm_rule_guards(item, data):
 
 def extend_merge_metadata(base, group_docs, merge_rule, merge_level):
     """
-    Extend merge metadata for grouped documents.
+    Extend merge metadata for grouped documents in Flow 2 only.
+    Independent of Flow 1 'duplicate' terminology.
     """
-    base["merge_items"] = list(dict.fromkeys(
-        base.get("merge_items", []) +
-        [d.get("ITEM") for d in group_docs if d.get("ITEM")]
-    ))
+    # 1. Merge Items: Only items Flow 2 decided to merge
+    new_items = [d.get("ITEM") for d in group_docs if d.get("ITEM")]
+    base["merge_items"] = list(dict.fromkeys(base.get("merge_items", []) + new_items))
     
-    base["merged_upcs"] = list(dict.fromkeys(
-        base.get("merged_upcs", []) +
-        [str(d.get("UPC")) for d in group_docs if d.get("UPC")]
-    ))
+    # 2. Merged UPCs: Only UPCs Flow 2 decided to merge
+    new_upcs = [str(d.get("UPC")) for d in group_docs if d.get("UPC")]
+    base["merged_upcs"] = list(dict.fromkeys(base.get("merged_upcs", []) + new_upcs))
 
-    
-    base["merged_from_docs"] = sum(d.get("merged_from_docs", 1) for d in group_docs)
+    # 3. Merged from Docs: Only counts 'Clean' Single Stock survivors merged here
+    base["merged_from_docs"] = sum(1 for d in group_docs)
     
     prev_rule = base.get("merge_rule")
     base["merge_rule"] = (
@@ -1078,6 +1220,10 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     FIXED_SHEET_NAME = "wersel_match"
     src_col = get_collection(SINGLE_STOCK_COL)
     tgt_col = get_collection(MASTER_STOCK_COL)
+    
+    # ✅ STEP 0: Clear previous Master Stock for fresh mastering run
+    tgt_col.delete_many({})
+    print(f"Cleared {MASTER_STOCK_COL} for fresh mastering.")
     
     # Process items that match our fixed sheet name
     docs = list(src_col.find({"sheet_name": FIXED_SHEET_NAME}))
@@ -1360,6 +1506,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
     
     # ✅ BATCH PROCESSING: Prepare batch operations
     batch_operations = []
+    merged_single_stock_ids = []
     
     # Process Groups
     for cluster_docs in final_groups_list:
@@ -1385,8 +1532,12 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 # Priority-ordered list: MORE SPECIFIC flavours FIRST, generic ones LAST.
                 # This prevents "HAZELNUT CHOC CHIP" from being grouped with "DOUBLE CHOC CHIP".
                 FLAVOUR_CONFLICTS_PRIORITY = [
+                    # Tier 0: Specific Variant Modifiers (Higher priority than base flavors)
+                    "MIXED NUTS", "NUTS", "USUYAKI", "EBI", 
+
                     # Tier 1: Highly specific compound flavours (check first)
                     "SALTED CARAMEL", "DARK CHOCOLATE", "DARK CHOCO", "NUTTY CHOCO",
+                    "WHITE CHOCOLATE", "WHITE CHOCO", "MILK CHOCOLATE",
                     "CHIA SEED", "CHOCOLATE CHIP", "CHOC CHIP", "RED VELVET",
                     # Tier 2: Specific single-ingredient flavours (check before generic CHOCOLATE)
                     "MACADAMIA", "PISTACHIO", "HAZELNUT", "CRANBERRY", "ALMOND",
@@ -1475,8 +1626,12 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 doc["sheet_name"] = "wersel_match"
                 
                 # Clean up internal fields
+                redundant_f2 = [
+                    "duplicate_documents", "duplicate_ids", "duplicate_items", 
+                    "duplicate_upcs", "is_duplicate_count"
+                ]
                 for k in list(doc.keys()):
-                    if k.startswith("_") or k.lower().startswith("unnamed"):
+                    if k.startswith("_") or k.lower().startswith("unnamed") or k in redundant_f2:
                         doc.pop(k)
                 
                 # Add to batch operations
@@ -1551,6 +1706,7 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             base["flavour"] = norm.get("flavour") or base.get("VARIANT", "") or ""
             base["variant"] = norm.get("variant") or "REGULAR"
             base["product_form"] = norm.get("product_form") or "UNKNOWN"
+            base["product_line"] = norm.get("product_line") or "UNKNOWN"
             base["size"] = norm.get("size") or base.get("NRMSIZE", "")
             base["normalized_item"] = norm.get("base_item") or base.get("ITEM", "")
             base["llm_confidence_min"] = min(norm_map.get(d.get("ITEM"), {}).get("confidence", 0) for d in group_docs)
@@ -1566,7 +1722,10 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             base["sheet_name"] = "wersel_match"
             
             # Clean up internal fields (Keep BRAND as it is critical for dashboard)
-            redundant_keys = ["VARIANT", "NRMSIZE"] # Removed BRAND from here
+            redundant_keys = [
+                "VARIANT", "NRMSIZE", "duplicate_documents", "duplicate_ids", 
+                "duplicate_items", "duplicate_upcs", "is_duplicate_count"
+            ]
             for k in list(base.keys()):
                 if k.startswith("_") or k.lower().startswith("unnamed") or k in redundant_keys:
                     base.pop(k)
@@ -1577,6 +1736,12 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
                 {"$set": base},
                 upsert=True
             ))
+            
+            # ✅ Collect IDs for status update
+            if len(group_docs) > 1:
+                for d in group_docs:
+                    if "_id" in d:
+                        merged_single_stock_ids.append(d["_id"])
     
     # ✅ BATCH WRITE: Write in batches of 5000 (5x faster than 1000)
     if batch_operations:
@@ -1593,6 +1758,14 @@ async def process_llm_mastering_flow_2(sheet_name, request=None):
             print(f"Flow 2: Saved batch: {min(i + batch_size, total_ops)}/{total_ops} master records")
             
             await asyncio.sleep(0)  # Yield for event loop
+            
+    # ✅ UPDATE SINGLE STOCK: Mark items as merged
+    if merged_single_stock_ids:
+        print(f"Flow 2: Flagging {len(merged_single_stock_ids)} items as merged in {SINGLE_STOCK_COL}...")
+        src_col.update_many(
+            {"_id": {"$in": merged_single_stock_ids}},
+            {"$set": {"is_merged_status": True}}
+        )
 
     
     return {

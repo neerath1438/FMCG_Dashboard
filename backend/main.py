@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.processor import process_excel_flow_1
 from backend.database import get_collection, create_indexes, RAW_DATA_COL, SINGLE_STOCK_COL, MASTER_STOCK_COL
 from backend.auth import validate_credentials, create_session, verify_session, destroy_session, get_user_info
+from backend.qa_engine import audit_all_brands, process_audit_logic, STOP_SIGNALS as QA_STOP_SIGNALS, get_audit_diagnostic, translate_audit_text
+from backend.mastering_qa_engine import process_mastering_logic, STOP_SIGNALS as MASTERING_STOP_SIGNALS, get_mastering_diagnostic, translate_diagnostic_text
 from pydantic import BaseModel
 import io
 import pandas as pd
@@ -300,44 +302,44 @@ async def get_summary():
         "low_confidence": low_confidence
     }
 
-@app.get("/api/audit/counts")
-async def get_audit_counts():
-    """Get audit dashboard counts for Nielsen data flow"""
-    # Get collections - using correct collection names
-    raw_data_coll = get_collection("raw_data")  # Raw Nielsen data
-    single_stock_coll = get_collection("single_stock_data")
-    master_stock_coll = get_collection("master_stock_data")
-    seven_eleven_coll = get_collection("7-eleven_data")  # Hyphen, not underscore
-    gaps_coll = get_collection("nielsen_gap_items")
-    seven_eleven_extra_coll = get_collection("7eleven_extra_items")  # No hyphen in 'extra'
-    
-    # Query for Nielsen Malaysia data
-    nielsen_query = {"Facts": "Sales Value", "Markets": "Pen Malaysia"}
-    
-    # Count documents
-    raw_nielsen = raw_data_coll.count_documents(nielsen_query)  # Raw Nielsen with query
-    single_stock = single_stock_coll.count_documents(nielsen_query)  # Apply same filter
-    master_stock = master_stock_coll.count_documents(nielsen_query)
-    ai_enriched = seven_eleven_coll.count_documents({})
-    
-    # Carried items: 7eleven_extra_items where Article_Description != "NOT CARRIED"
-    carried = seven_eleven_extra_coll.count_documents({"Article_Description": {"$ne": "NOT CARRIED"}})
-    
-    # 7-Eleven Gaps: 7eleven_extra_items where Article_Description = "NOT CARRIED"
-    gaps = seven_eleven_extra_coll.count_documents({"Article_Description": "NOT CARRIED"})
-    
-    # 7-Eleven Unique: AI Enriched - Carried Items (Reverse Gap)
-    seven_eleven_unique = ai_enriched - carried
-    
-    return {
-        "raw_nielsen": raw_nielsen,
-        "single_stock": single_stock,
-        "master_stock": master_stock,
-        "ai_enriched": ai_enriched,
-        "carried": carried,
-        "gaps": gaps,
-        "seven_eleven_unique": seven_eleven_unique
-    }
+# @app.get("/api/audit/counts")
+# async def get_audit_counts():
+#     """Get audit dashboard counts for Nielsen data flow"""
+#     # Get collections - using correct collection names
+#     raw_data_coll = get_collection("raw_data")  # Raw Nielsen data
+#     single_stock_coll = get_collection("single_stock_data")
+#     master_stock_coll = get_collection("master_stock_data")
+#     seven_eleven_coll = get_collection("7-eleven_data")  # Hyphen, not underscore
+#     gaps_coll = get_collection("nielsen_gap_items")
+#     seven_eleven_extra_coll = get_collection("7eleven_extra_items")  # No hyphen in 'extra'
+#     
+#     # Query for Nielsen Malaysia data
+#     nielsen_query = {"Facts": "Sales Value", "Markets": "Pen Malaysia"}
+#     
+#     # Count documents
+#     raw_nielsen = raw_data_coll.count_documents(nielsen_query)  # Raw Nielsen with query
+#     single_stock = single_stock_coll.count_documents(nielsen_query)  # Apply same filter
+#     master_stock = master_stock_coll.count_documents(nielsen_query)
+#     ai_enriched = seven_eleven_coll.count_documents({})
+#     
+#     # Carried items: 7eleven_extra_items where Article_Description != "NOT CARRIED"
+#     carried = seven_eleven_extra_coll.count_documents({"Article_Description": {"$ne": "NOT CARRIED"}})
+#     
+#     # 7-Eleven Gaps: 7eleven_extra_items where Article_Description = "NOT CARRIED"
+#     gaps = seven_eleven_extra_coll.count_documents({"Article_Description": "NOT CARRIED"})
+#     
+#     # 7-Eleven Unique: AI Enriched - Carried Items (Reverse Gap)
+#     seven_eleven_unique = ai_enriched - carried
+#     
+#     return {
+#         "raw_nielsen": raw_nielsen,
+#         "single_stock": single_stock,
+#         "master_stock": master_stock,
+#         "ai_enriched": ai_enriched,
+#         "carried": carried,
+#         "gaps": gaps,
+#         "seven_eleven_unique": seven_eleven_unique
+#     }
 
 @app.get("/api/filtered-records")
 async def get_filtered_records():
@@ -1147,6 +1149,157 @@ from fastapi.staticfiles import StaticFiles
 export_dir = os.path.join(root_dir, "backend", "exports")
 os.makedirs(export_dir, exist_ok=True)
 app.mount("/exports", StaticFiles(directory=export_dir), name="exports")
+
+@app.post("/api/qa/run-audit")
+async def run_audit():
+    """
+    Triggers the AI Audit pipeline for all brands.
+    """
+    try:
+        summary = audit_all_brands()
+        return {"status": "success", "summary": summary}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/qa/reports")
+async def get_audit_reports():
+    """
+    Fetches all generated AI Audit reports.
+    """
+    report_dir = r"D:\Final_Input_and_Output\output_directry\AI_AUDIT_REPORTS"
+    if not os.path.exists(report_dir):
+        return []
+    
+    reports = []
+    for file in os.listdir(report_dir):
+        if file.endswith(".json"):
+            with open(os.path.join(report_dir, file), 'r') as f:
+                reports.append(json.load(f))
+    return reports
+
+@app.post("/api/qa/upload-audit")
+async def upload_audit(file: UploadFile = File(...)):
+    """
+    Accepts a mapping CSV, runs AI Audit, and returns results + logs.
+    """
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported.")
+    
+    try:
+        contents = await file.read()
+        df = pd.read_csv(io.BytesIO(contents))
+        
+        # Identify brand from filename if possible
+        brand_name = file.filename.replace('mapping_analysis_final_', '').replace('.csv', '')
+        
+        results, logs = process_audit_logic(df, brand_name)
+        
+        return {
+            "status": "success",
+            "brand": brand_name,
+            "results": results,
+            "logs": logs,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/qa/mastering-audit")
+async def mastering_audit(file: UploadFile = File(...)):
+    """
+    Accepts a Master Stock report, identifies missed groups among single items.
+    """
+    if not (file.filename.endswith('.csv') or file.filename.endswith('.xlsx')):
+        raise HTTPException(status_code=400, detail="Only CSV or XLSX files are supported.")
+    
+    try:
+        contents = await file.read()
+        if file.filename.endswith('.xlsx'):
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            df = pd.read_csv(io.BytesIO(contents))
+        
+        brand_name = file.filename.split('.')[0]
+        results, logs = process_mastering_logic(df, brand_name)
+        
+        return {
+            "status": "success",
+            "brand": brand_name,
+            "results": results,
+            "logs": logs,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/qa/stop-audit")
+async def stop_audit(brand: str = Header(...)):
+    """
+    Sets the stop signal for a specific brand audit.
+    """
+    QA_STOP_SIGNALS[brand] = True
+    MASTERING_STOP_SIGNALS[brand] = True
+    return {"status": "success", "message": f"Stop signal sent for {brand}"}
+
+class DiagnosticRequest(BaseModel):
+    item_names: list[str]
+
+@app.post("/api/qa/mastering-diagnostic")
+async def mastering_diagnostic(req: DiagnosticRequest):
+    """
+    Returns a root-cause analysis for why a group of items didn't merge.
+    """
+    try:
+        report = get_mastering_diagnostic(req.item_names)
+        return {"status": "success", "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class AuditDiagnosticRequest(BaseModel):
+    gap_desc: str
+    gap_size: float
+    hero_candidates: list
+
+@app.post("/api/qa/audit-diagnostic")
+async def audit_diagnostic(req: AuditDiagnosticRequest):
+    """
+    Returns a root-cause analysis for an AI Audit mismatch.
+    """
+    try:
+        report = get_audit_diagnostic(req.gap_desc, req.gap_size, req.hero_candidates)
+        return {"status": "success", "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/qa/translate-audit")
+async def translate_audit(data: dict):
+    """
+    Translates an AI Audit diagnostic block to Tamil.
+    """
+    try:
+        text = data.get("text")
+        if not text:
+            return {"translatedText": ""}
+        translation = translate_audit_text(text)
+        return {"status": "success", "translatedText": translation}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/qa/translate-text")
+async def translate_text(data: dict):
+    """
+    Translates a block of text to Tamil using AI.
+    """
+    try:
+        text = data.get("text")
+        if not text:
+            return {"translatedText": ""}
+        translation = translate_diagnostic_text(text)
+        return {"status": "success", "translatedText": translation}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
