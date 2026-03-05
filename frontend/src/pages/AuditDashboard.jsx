@@ -1,20 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  Play, 
-  Upload, 
-  Terminal, 
-  FileText, 
-  Cpu, 
-  Layers, 
-  ArrowRight,
-  RefreshCw,
-  ExternalLink,
-  Zap,
-  Clock,
-  GitBranch,
-  X
+import {
+    CheckCircle,
+    AlertCircle,
+    Play,
+    Upload,
+    Terminal,
+    FileText,
+    Cpu,
+    Layers,
+    ArrowRight,
+    RefreshCw,
+    ExternalLink,
+    Zap,
+    Clock,
+    GitBranch,
+    X
 } from 'lucide-react';
 import { qaAPI } from '../services/api';
 
@@ -83,11 +83,11 @@ const AuditDashboard = () => {
 
             if (data.status === 'success') {
                 setBrand(data.brand);
-                
+
                 // Process logs with stage tracking
                 for (const log of data.logs) {
                     await new Promise(r => setTimeout(r, 60));
-                    
+
                     // Logic to update active stage based on log content
                     if (log.includes("Analyzing GAP")) {
                         setActiveStage(2); // Move to Stage 2: Semantic AI
@@ -98,7 +98,7 @@ const AuditDashboard = () => {
                     const type = log.includes('✅') ? 'success' : log.includes('❌') ? 'error' : log.includes('⚠️') ? 'warn' : 'info';
                     addLog(log, type);
                 }
-                
+
                 setResults(data.results);
                 setPipelineStatus('success');
                 setActiveStage(3); // Ensure stage 3 is complete
@@ -155,10 +155,10 @@ const AuditDashboard = () => {
 
         setIsTranslating(true);
         try {
-            const textToTranslate = typeof diagnosticReport === 'string' 
-                ? diagnosticReport 
+            const textToTranslate = typeof diagnosticReport === 'string'
+                ? diagnosticReport
                 : diagnosticReport.diagnosis;
-            
+
             const res = await qaAPI.translateAudit(textToTranslate);
             if (res.status === 'success') {
                 setTranslatedReport(res.translatedText);
@@ -244,8 +244,8 @@ const AuditDashboard = () => {
                         return (
                             <React.Fragment key={stage.id}>
                                 <div className={`flex-1 transition-all duration-300 rounded-2xl p-4 flex flex-col gap-3 border
-                                    ${isCurrent ? 'bg-white ring-2 ring-blue-100 border-blue-200' : 
-                                      isDone ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white/50 border-white/80'}`}>
+                                    ${isCurrent ? 'bg-white ring-2 ring-blue-100 border-blue-200' :
+                                        isDone ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white/50 border-white/80'}`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg transition-colors duration-500 ${statusColor}`}>
                                             {isDone ? <CheckCircle size={20} /> : <stage.icon size={20} />}
@@ -256,14 +256,14 @@ const AuditDashboard = () => {
                                         </div>
                                     </div>
                                     <p className="text-xs text-gray-500 leading-tight">{stage.desc}</p>
-                                    
+
                                     {stage.id === 1 && (
-                                        <button 
+                                        <button
                                             onClick={startAudit}
                                             disabled={!file || pipelineStatus === 'running'}
                                             className={`mt-2 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2
-                                                ${!file || pipelineStatus === 'running' 
-                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                                ${!file || pipelineStatus === 'running'
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                     : 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-sm hover:shadow-md active:scale-95'}`}
                                         >
                                             {pipelineStatus === 'running' ? <RefreshCw className="animate-spin size-3" /> : <Play size={12} />}
@@ -272,7 +272,7 @@ const AuditDashboard = () => {
                                     )}
 
                                     {stage.id === 1 && pipelineStatus === 'running' && (
-                                        <button 
+                                        <button
                                             onClick={handleStop}
                                             className="mt-1 py-1.5 rounded-xl text-[10px] font-bold bg-white border border-red-100 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2 shadow-sm"
                                         >
@@ -302,7 +302,7 @@ const AuditDashboard = () => {
                         <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
                     </div>
                 </div>
-                <div 
+                <div
                     ref={logContainerRef}
                     className="bg-gray-950/95 h-56 overflow-y-auto px-4 py-3 font-mono text-[11px] space-y-1 custom-scrollbar"
                 >
@@ -354,7 +354,7 @@ const AuditDashboard = () => {
                                                 <div className="text-xs text-gray-600 italic leading-relaxed">"{m.reason}"</div>
                                             </td>
                                             <td className="px-6 py-5 text-center">
-                                                <button 
+                                                <button
                                                     onClick={() => handleOpenDiagnostic(m)}
                                                     className="p-2 bg-gray-100 rounded-lg text-gray-500 hover:text-white hover:bg-pink-500 transition-all shadow-sm group-hover:scale-110"
                                                 >
@@ -373,11 +373,11 @@ const AuditDashboard = () => {
             {/* Diagnostic Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div 
+                    <div
                         className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300"
                         onClick={() => setShowModal(false)}
                     />
-                    
+
                     <div className="relative bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 border border-white/20">
                         {/* Modal Header */}
                         <div className="p-6 bg-white border-b border-gray-100 flex items-center justify-between">
@@ -392,7 +392,7 @@ const AuditDashboard = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setShowModal(false)}
                                 className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                             >
@@ -417,7 +417,7 @@ const AuditDashboard = () => {
                                                     <h4 className="text-sm font-bold text-pink-900">
                                                         AI Audit Summary ({showTamil ? 'Tamil' : 'English'})
                                                     </h4>
-                                                    <button 
+                                                    <button
                                                         onClick={handleTranslate}
                                                         disabled={isTranslating}
                                                         className="text-[10px] font-bold px-3 py-1 bg-pink-600 text-white rounded-full hover:bg-pink-700 transition-all disabled:opacity-50"
@@ -445,7 +445,7 @@ const AuditDashboard = () => {
                                             <div className="flex items-center gap-2">
                                                 <GitBranch className="text-pink-500" size={16} />
                                                 <span className="text-xs font-bold text-gray-700 uppercase">
-                                                    {diagnosticReport?.rule_reference || "mapping_analysis.py:L90"}
+                                                    {diagnosticReport?.rule_reference || "Analyzing Logic..."}
                                                 </span>
                                             </div>
                                         </div>
@@ -461,13 +461,13 @@ const AuditDashboard = () => {
                                                 <>
                                                     // Recommendation: Review mapping rules and flavor conflicts.
                                                     <br />
-                                                    // Target: mapping_analysis.py -> validate_match()
+                                                    // Target: mapping_analysis.py {'->'} validate_match()
                                                 </>
                                             ) : (
                                                 <>
                                                     // Recommendation: {diagnosticReport?.actionable_solution}
                                                     <br />
-                                                    // Target: mapping_analysis.py specific rules
+                                                    // Target: {diagnosticReport?.rule_reference}
                                                 </>
                                             )}
                                         </div>
@@ -478,7 +478,7 @@ const AuditDashboard = () => {
 
                         {/* Modal Footer */}
                         <div className="p-6 bg-gray-50/50 border-t border-gray-100 flex justify-end">
-                            <button 
+                            <button
                                 onClick={() => setShowModal(false)}
                                 className="px-6 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-white hover:shadow-md transition-all active:scale-95"
                             >

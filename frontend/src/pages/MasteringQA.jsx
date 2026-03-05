@@ -1,23 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  Play, 
-  Upload, 
-  Terminal, 
-  FileText, 
-  Cpu, 
-  Layers, 
-  ArrowRight,
-  RefreshCw,
-  ExternalLink,
-  Zap,
-  Clock,
-  GitBranch,
-  Table,
-  Box,
-  Share2,
-  X
+import {
+    CheckCircle,
+    AlertCircle,
+    Play,
+    Upload,
+    Terminal,
+    FileText,
+    Cpu,
+    Layers,
+    ArrowRight,
+    RefreshCw,
+    ExternalLink,
+    Zap,
+    Clock,
+    GitBranch,
+    Table,
+    Box,
+    Share2,
+    X
 } from 'lucide-react';
 import { qaAPI } from '../services/api';
 
@@ -35,7 +35,7 @@ const LOG_COLORS = {
 const MasteringQA = () => {
     const [file, setFile] = useState(null);
     const [pipelineStatus, setPipelineStatus] = useState('pending'); // pending, running, success, failed
-    const [activeStage, setActiveStage] = useState(0); 
+    const [activeStage, setActiveStage] = useState(0);
     const [logs, setLogs] = useState([]);
     const [results, setResults] = useState([]);
     const [brand, setBrand] = useState("");
@@ -85,11 +85,11 @@ const MasteringQA = () => {
 
             if (data.status === 'success') {
                 setBrand(data.brand);
-                
+
                 // Process logs with stage tracking
                 for (const log of data.logs) {
                     await new Promise(r => setTimeout(r, 60));
-                    
+
                     if (log.includes("Analyzing Bucket")) {
                         setActiveStage(2); // Stage 2: AI Semantic Grouping
                     } else if (log.includes("Mastering QA completed")) {
@@ -99,7 +99,7 @@ const MasteringQA = () => {
                     const type = log.includes('✅') ? 'success' : log.includes('❌') ? 'error' : log.includes('⚠️') ? 'warn' : 'info';
                     addLog(log, type);
                 }
-                
+
                 setResults(data.results);
                 setPipelineStatus('success');
                 setActiveStage(3);
@@ -153,10 +153,10 @@ const MasteringQA = () => {
 
         setIsTranslating(true);
         try {
-            const textToTranslate = typeof diagnosticReport === 'string' 
-                ? diagnosticReport 
+            const textToTranslate = typeof diagnosticReport === 'string'
+                ? diagnosticReport
                 : diagnosticReport.diagnosis;
-            
+
             const res = await qaAPI.translateText(textToTranslate);
             if (res.status === 'success') {
                 setTranslatedReport(res.translatedText);
@@ -242,8 +242,8 @@ const MasteringQA = () => {
                         return (
                             <React.Fragment key={stage.id}>
                                 <div className={`flex-1 transition-all duration-300 rounded-2xl p-4 flex flex-col gap-3 border
-                                    ${isCurrent ? 'bg-white ring-2 ring-blue-100 border-blue-200 shadow-lg' : 
-                                      isDone ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white/50 border-white/80'}`}>
+                                    ${isCurrent ? 'bg-white ring-2 ring-blue-100 border-blue-200 shadow-lg' :
+                                        isDone ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white/50 border-white/80'}`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg transition-colors duration-500 ${statusColor}`}>
                                             {isDone ? <CheckCircle size={20} /> : <stage.icon size={20} />}
@@ -254,14 +254,14 @@ const MasteringQA = () => {
                                         </div>
                                     </div>
                                     <p className="text-xs text-gray-500 leading-tight">{stage.desc}</p>
-                                    
+
                                     {stage.id === 1 && (
-                                        <button 
+                                        <button
                                             onClick={startAudit}
                                             disabled={!file || pipelineStatus === 'running'}
                                             className={`mt-2 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2
-                                                ${!file || pipelineStatus === 'running' 
-                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                                ${!file || pipelineStatus === 'running'
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:shadow-md active:scale-95'}`}
                                         >
                                             {pipelineStatus === 'running' ? <RefreshCw className="animate-spin size-3" /> : <Play size={12} />}
@@ -270,7 +270,7 @@ const MasteringQA = () => {
                                     )}
 
                                     {stage.id === 1 && pipelineStatus === 'running' && (
-                                        <button 
+                                        <button
                                             onClick={handleStop}
                                             className="mt-1 py-1.5 rounded-xl text-[10px] font-bold bg-white border border-red-200 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2 shadow-sm"
                                         >
@@ -300,7 +300,7 @@ const MasteringQA = () => {
                         <span className="w-2.5 h-2.5 rounded-full bg-green-400/50" />
                     </div>
                 </div>
-                <div 
+                <div
                     ref={logContainerRef}
                     className="bg-black/90 h-60 overflow-y-auto px-4 py-3 font-mono text-[11px] space-y-1 custom-scrollbar"
                 >
@@ -331,7 +331,7 @@ const MasteringQA = () => {
                             Source: {brand}
                         </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {results.map((res, i) => (
                             <div key={i} className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm p-5 hover:shadow-md transition-all group border-l-4 border-l-blue-500">
@@ -349,7 +349,7 @@ const MasteringQA = () => {
                                         </span>
                                     </div>
                                 </div>
-                                
+
                                 <div className="space-y-2 mb-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                                     <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Items in Group</p>
                                     {res.matched_items.map((item, idx) => (
@@ -359,16 +359,16 @@ const MasteringQA = () => {
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 <div className="bg-white/80 p-3 rounded-xl border border-white shadow-inner">
                                     <div className="flex items-start gap-2">
                                         <AlertCircle size={14} className="text-blue-500 mt-0.5 flex-shrink-0" />
                                         <p className="text-xs text-gray-600 italic leading-relaxed">"{res.reason}"</p>
                                     </div>
                                 </div>
-                                
+
                                 <div className="mt-4 flex gap-2">
-                                    <button 
+                                    <button
                                         onClick={() => handleAcceptMerge(res)}
                                         className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all active:scale-95"
                                     >
@@ -400,7 +400,7 @@ const MasteringQA = () => {
                                     <p className="text-[10px] text-gray-500 font-medium">Root Cause Analysis for: {selectedGroup?.group_name}</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setShowModal(false)}
                                 className="p-2 hover:bg-white hover:shadow-sm rounded-xl text-gray-400 hover:text-gray-600 transition-all"
                             >
@@ -428,7 +428,7 @@ const MasteringQA = () => {
                                                     <h4 className="text-sm font-bold text-blue-900">
                                                         AI Diagnostic Summary ({showTamil ? 'Tamil' : 'English'})
                                                     </h4>
-                                                    <button 
+                                                    <button
                                                         onClick={handleTranslate}
                                                         disabled={isTranslating}
                                                         className="text-[10px] font-bold px-3 py-1 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all disabled:opacity-50"
@@ -456,7 +456,7 @@ const MasteringQA = () => {
                                             <div className="flex items-center gap-2">
                                                 <GitBranch className="text-blue-500" size={16} />
                                                 <span className="text-xs font-bold text-gray-700 uppercase">
-                                                    {diagnosticReport?.rule_reference || "processor.py:L1122"}
+                                                    {diagnosticReport?.rule_reference || "Analyzing Logic..."}
                                                 </span>
                                             </div>
                                         </div>
@@ -478,7 +478,7 @@ const MasteringQA = () => {
                                                 <>
                                                     // Recommendation: {diagnosticReport?.actionable_solution}
                                                     <br />
-                                                    // Target: processor.py specific rules
+                                                    // Target: {diagnosticReport?.rule_reference}
                                                 </>
                                             )}
                                         </div>
@@ -489,7 +489,7 @@ const MasteringQA = () => {
 
                         {/* Modal Footer */}
                         <div className="p-6 bg-gray-50/50 border-t border-gray-100 flex justify-end">
-                            <button 
+                            <button
                                 onClick={() => setShowModal(false)}
                                 className="px-6 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-white hover:shadow-md transition-all active:scale-95"
                             >
